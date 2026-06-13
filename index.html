@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SS15 · ตารางวัดนำสวดมนต์</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+    <div class="header-inner">
+        <div class="header-brand">
+            <div class="header-logo"><img src="assets/dmceu-lg.png" alt="DMCEU" class="header-logo-img"></div>
+            <div class="header-title">
+                <h1>ตารางวัดนำสวดมนต์</h1>
+                <p>บ้านกัลยาณมิตรทวีปยุโรป · ซีซั่นที่ 15</p>
+            </div>
+        </div>
+        <div class="header-right">
+            <div class="live-clock">
+                <div class="live-dot"></div>
+                <span class="clock-text" id="live-time">--:--:--</span>
+                <span id="user-flag" class="clock-text user-flag"></span>
+            </div>
+            <button class="theme-btn" id="themeBtn" title="สลับโหมด">
+                <span id="theme-icon">🌙</span>
+            </button>
+        </div>
+    </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+ <!--    <img src="assets/dmceu-lg.png" alt="DMCEU" class="hero-logo"> -->
+    <div class="season-badge">✨ ซีซั่นที่ 15 · LIVE UPDATE</div>
+    <h2>ตารางวัดนำสวดมนต์<br>บ้านกัลยาณมิตรทวีปยุโรป</h2>
+    <p id="live-date-hero">โหลดวันที่...</p>
+    <div class="stats-row">
+        <div class="stat-box">
+            <div class="stat-label">ลงข้อมูลแล้ว</div>
+            <div class="stat-num gold" id="stat-booked">–</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">คิวที่ยังว่าง</div>
+            <div class="stat-num" id="stat-available">–</div>
+        </div>
+    </div>
+</div>
+
+<!-- NEXT QUEUE BANNER -->
+<div class="content-area next-area">
+    <div class="next-banner" id="next-queue-banner">
+        <div class="next-icon">📅</div>
+        <div class="next-content">
+            <div class="next-label">
+                <span class="next-live-dot"></span>
+                คิวสวดมนต์ถัดไป <span id="nq-no-container" class="nq-no-container"></span>
+            </div>
+            <div class="next-title" id="nq-temple">–</div>
+            <div class="next-meta">
+                <div class="meta-chip">📅 <span id="nq-date">–</span></div>
+                <div class="meta-chip">👤 <span id="nq-monk">–</span></div>
+            </div>
+            <a href="https://us06web.zoom.us/j/3562258816?pwd=ChEDvYbI5bUlEQaJV0gVsHoXicJ5pm.1&omn=86163194865"
+               target="_blank" rel="noopener noreferrer" class="zoom-btn">
+                🎥 <span>เข้าร่วมผ่าน Zoom</span>
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- CONTENT AREA -->
+<div class="content-area main-area">
+
+    <!-- Filter Bar -->
+    <div class="filter-bar">
+        <div class="search-wrap">
+            <span class="search-icon">🔍</span>
+            <input type="text" class="search-input" id="searchInput" placeholder="ค้นหาชื่อวัด, พระอาจารย์, หัวข้อ...">
+        </div>
+        <select class="filter-select" id="statusFilter">
+            <option value="all">แสดงทั้งหมด</option>
+            <option value="available">🔴 คิวที่ยังว่าง</option>
+            <option value="booked">🟢 ลงข้อมูลแล้ว</option>
+        </select>
+        <select class="filter-select" id="timelineFilter">
+            <option value="all">ทุกช่วงเวลา</option>
+            <option value="past">ผ่านไปแล้ว</option>
+            <option value="next">คิวถัดไป</option>
+            <option value="future">กำลังจะมาถึง</option>
+            <option value="unknown">รอวันที่</option>
+        </select>
+        <span class="result-count" id="result-count"></span>
+    </div>
+
+    <!-- Cards Container -->
+    <div id="cards-container">
+        <div class="loading-state">
+            <div class="spinner"></div>
+            กำลังโหลดฐานข้อมูล...
+        </div>
+    </div>
+</div>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+    ข้อมูล Real-time · พัฒนาโดย <span>ทีมงาน dmceu</span> · &copy; 2026 Dhammakaya of Europe
+</footer>
+
+<!-- Scroll Top -->
+<div id="scrollBtn">↑</div>
+
+<script src="script.js"></script>
+<script src="https://docs.google.com/spreadsheets/d/1rqAODfjERHt6-PQtrm7gFM3VVCHwlNvKK6-KddVe4IE/gviz/tq?tqx=out:json;responseHandler:processSheetData" onerror="handleScriptError()"></script>
+</body>
+</html>
