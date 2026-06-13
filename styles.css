@@ -26,6 +26,7 @@
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { max-width: 100%; overflow-x: hidden; }
 body {
     font-family: 'Kanit', sans-serif;
     background: var(--bg);
@@ -428,7 +429,52 @@ input[type="text"], select { -webkit-user-select: auto; user-select: auto; }
     }
     .timeline-badge span { font-size: 12px; }
     .content-area { padding: 0 14px 40px; }
-    .filter-bar { padding: 12px 14px; }
+    .filter-bar {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+        padding: 14px;
+        border-radius: 14px;
+        overflow: hidden;
+    }
+    .filter-bar > * { min-width: 0; }
+    .search-wrap {
+        width: 100%;
+        min-width: 0;
+    }
+    .search-icon {
+        left: 14px;
+        font-size: 18px;
+    }
+    .search-input {
+        height: 52px;
+        padding: 0 14px 0 46px;
+        border-radius: 12px;
+        font-size: 16px;
+        line-height: 1.2;
+        -webkit-text-size-adjust: 100%;
+    }
+    .search-input::placeholder {
+        font-size: 16px;
+        opacity: 0.72;
+    }
+    .filter-select {
+        width: 100%;
+        min-width: 0;
+        height: 52px;
+        padding: 0 42px 0 14px;
+        border-radius: 12px;
+        font-size: 16px;
+        line-height: 1.2;
+        background-position: right 14px center;
+        -webkit-text-size-adjust: 100%;
+    }
+    .result-count {
+        width: 100%;
+        font-size: 15px;
+        padding: 2px 2px 0;
+        white-space: normal;
+    }
     .next-banner { flex-direction: column; }
     .header-inner { padding: 10px 16px; }
 }
