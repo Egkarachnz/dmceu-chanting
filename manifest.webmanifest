@@ -1,0 +1,19 @@
+{
+  "name": "ตารางวัดนำสวดมนต์ · DMCEU ซีซั่น 15",
+  "short_name": "สวดมนต์ SS15",
+  "description": "ตารางวัดนำสวดมนต์ บ้านกัลยาณมิตรทวีปยุโรป ซีซั่นที่ 15 — อัปเดตแบบเรียลไทม์",
+  "lang": "th",
+  "dir": "ltr",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#141a33",
+  "theme_color": "#141a33",
+  "categories": ["lifestyle", "education"],
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
