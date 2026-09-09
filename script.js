@@ -14,7 +14,7 @@
    A=ลำดับที่  B=ชื่อวัด  C=ครั้งที่  D=วันที่  E=พระอาจารย์  F=หัวข้อ
    (เปลี่ยนจากในแอปได้ที่ "ตั้งค่าแหล่งข้อมูล" ท้ายหน้า โดยไม่ต้องแก้ไฟล์นี้)
    ──────────────────────────────────────────────────────────── */
-const SHEET_LINK = 'https://docs.google.com/spreadsheets/d/1rqAODfjERHt6-PQtrm7gFM3VVCHwlNvKK6-KddVe4IE/edit';
+const SHEET_LINK = 'https://docs.google.com/spreadsheets/d/1pcqRU-76PFxUGj99ZVV5VlA028OaJ6nj7j12mXgOOzQ/edit';
 
 /* ────────────────────────────────────────────────────────────
    โหมดแอดมิน (ทีมงาน) — ซ่อนปุ่ม "ตั้งค่าแหล่งข้อมูล" จากผู้ใช้ทั่วไป
@@ -149,7 +149,8 @@ function loadConfigSheet() {
     const el = document.createElement('script');
     el.src = 'https://docs.google.com/spreadsheets/d/' + src.id +
              '/gviz/tq?tqx=out:json;responseHandler:processConfigData' +
-             '&sheet=config&tq=' + encodeURIComponent('select A,B limit 50') + '&_=' + Date.now();
+             '&sheet=config&headers=0' +            // headers=0 = อ่านแถวแรกเป็นข้อมูล ไม่ใช่หัวตาราง
+             '&tq=' + encodeURIComponent('select A,B limit 50') + '&_=' + Date.now();
     el.async = true;
     el.onerror = () => el.remove();      // ไม่มีแท็บ config ก็ใช้ค่าตั้งต้นตามปกติ
     el.addEventListener('load', () => el.remove());
