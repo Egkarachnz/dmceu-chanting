@@ -2,7 +2,7 @@
    App shell: cache-first with background revalidate.
    Sheet data is JSONP from Google and is never cached here. */
 
-const VERSION = 'dmceu-ss15-v5';
+const VERSION = 'dmceu-ss15-v6';
 const SHELL = [
     './',
     'index.html',
