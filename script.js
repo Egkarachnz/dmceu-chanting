@@ -94,6 +94,8 @@ const LIVE_DEFAULTS = {
     days: null                   // null = เฉพาะวันที่มีคิวในตาราง, [0,6] = อา.+ส. เสมอ
 };
 
+const SEASON_LABEL = 'ซีซั่นที่ 16';   // ข้อความนำหน้าช่วงวันที่บนป้ายหัวหน้าแรก
+
 const LIVE_KEY = 'dmceu.ss15.live';
 const LIVE_CONFIG = Object.assign({}, LIVE_DEFAULTS);  // ค่าที่ใช้งานจริง
 let liveFromSheet = {};   // ค่าจากแท็บ config
@@ -455,6 +457,10 @@ function applyRows(rows) {
         }
     });
 
+    const dated = allData.filter(it => it.parsedDate).map(it => it.parsedDate.getTime());
+    renderSeasonRange(dated.length ? new Date(Math.min.apply(null, dated)) : null,
+                      dated.length ? new Date(Math.max.apply(null, dated)) : null);
+
     nextQueueNo = nextEvent ? nextEvent.no : null;
     allData.forEach(it => { it.timelineStatus = getTimelineStatus(it.parsedDate, it.no === nextQueueNo); });
 
@@ -466,6 +472,29 @@ function applyRows(rows) {
     if (rows.length && !allData.length) {
         toast('อ่านชีตได้ แต่ไม่พบแถวข้อมูล · ตรวจลำดับคอลัมน์ (A=ลำดับที่)');
     }
+}
+
+/* ─── ป้ายหัวหน้าแรก: ซีซั่น + ช่วงวันที่ของซีซั่น ─── */
+function renderSeasonRange(from, to) {
+    const el = $('#season-range');
+    if (!el) return;
+    if (!from || !to) { el.textContent = SEASON_LABEL; return; }
+
+    const d = x => x.getDate();
+    const mo = x => thaiMonths[x.getMonth()];
+    const y = x => x.getFullYear() + 543;
+
+    let range;
+    if (y(from) !== y(to))                       // คนละปี: 12 ธ.ค. 2569 – 10 ม.ค. 2570
+        range = `${d(from)} ${mo(from)} ${y(from)} – ${d(to)} ${mo(to)} ${y(to)}`;
+    else if (from.getMonth() !== to.getMonth())  // คนละเดือน: 12 ก.ย. – 20 ธ.ค. 2569
+        range = `${d(from)} ${mo(from)} – ${d(to)} ${mo(to)} ${y(to)}`;
+    else if (d(from) !== d(to))                  // เดือนเดียวกัน: 12 – 20 ก.ย. 2569
+        range = `${d(from)} – ${d(to)} ${mo(to)} ${y(to)}`;
+    else                                         // วันเดียว
+        range = `${d(to)} ${mo(to)} ${y(to)}`;
+
+    el.textContent = `${SEASON_LABEL} · ${range}`;
 }
 
 /* ─── Hero stats ─── */
