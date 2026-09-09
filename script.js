@@ -761,12 +761,6 @@ function renderLive() {
             : (st.key === 'soon' ? '<span class="live-pill"><i></i> ใกล้เริ่ม</span>' : ''))
         + esc(st.title);
 
-    // ป้าย LIVE บนปุ่ม Zoom ของการ์ด "คิวถัดไป"
-    const pill = $('#nqLivePill');
-    if (pill) pill.hidden = st.key !== 'live';
-    const zoomLabel = $('#nqZoomLabel');
-    if (zoomLabel) zoomLabel.textContent = st.key === 'live' ? 'เข้าร่วมถ่ายทอดสดตอนนี้' : 'เข้าร่วมผ่าน Zoom';
-
     if (liveKey === 'off' && st.key === 'live') toast('เริ่มถ่ายทอดสดแล้ว · แตะแถบด้านล่างเพื่อเข้าร่วม');
     liveKey = st.key;
     measureDock();
