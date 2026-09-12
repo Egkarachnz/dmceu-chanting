@@ -94,7 +94,19 @@ const LIVE_DEFAULTS = {
     days: null                   // null = เฉพาะวันที่มีคิวในตาราง, [0,6] = อา.+ส. เสมอ
 };
 
-const SEASON_LABEL = 'ซีซั่นที่ 16';   // ข้อความนำหน้าช่วงวันที่บนป้ายหัวหน้าแรก
+const SEASON_LABEL = 'ซีซั่นที่ 16';
+
+/* ────────────────────────────────────────────────────────────
+   ตัวนับคนเข้าชม / คนออนไลน์ (Supabase โปรเจกต์ dmceu-chanting)
+   · key เป็น publishable key ใส่ในหน้าเว็บได้ตามปกติ
+   · ตารางถูกล็อกไว้ เรียกได้เฉพาะฟังก์ชัน record_visit / heartbeat / leave_presence
+   · ใส่ url เป็นค่าว่าง ('') ถ้าจะปิดตัวนับ
+   ──────────────────────────────────────────────────────────── */
+const STATS_CONFIG = {
+    url: 'https://apjgwbwdzkxadbcutuxt.supabase.co',
+    key: 'sb_publishable_2LvhHxTNRxdjKlQVNg-AkQ_10ZEiHTK',
+    heartbeatSeconds: 30
+};   // ข้อความนำหน้าช่วงวันที่บนป้ายหัวหน้าแรก
 
 const LIVE_KEY = 'dmceu.ss15.live';
 const LIVE_CONFIG = Object.assign({}, LIVE_DEFAULTS);  // ค่าที่ใช้งานจริง
@@ -1214,10 +1226,78 @@ document.addEventListener('visibilitychange', () => {
     if (!lastSync || Date.now() - lastSync.getTime() > 5 * 60 * 1000) loadData();
 });
 
+
+/* ─── ตัวนับคนเข้าชม / ออนไลน์ ─── */
+const CLIENT_KEY = 'dmceu.ss15.client';
+
+function clientId() {
+    try {
+        let id = localStorage.getItem(CLIENT_KEY);
+        if (!id) {
+            id = (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+               : 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
+                     const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 3 | 8)).toString(16); });
+            localStorage.setItem(CLIENT_KEY, id);
+        }
+        return id;
+    } catch (e) { return null; }
+}
+
+async function statsRpc(fn, body) {
+    const res = await fetch(`${STATS_CONFIG.url}/rest/v1/rpc/${fn}`, {
+        method: 'POST',
+        headers: { apikey: STATS_CONFIG.key, 'Content-Type': 'application/json' },
+        body: JSON.stringify(body || {})
+    });
+    if (!res.ok) throw new Error('stats ' + res.status);
+    return res.json();
+}
+
+function renderStatsCounts(data) {
+    if (!data) return;
+    $('#stat-visits').textContent = Number(data.total || 0).toLocaleString('th-TH');
+    $('#stat-online').textContent = Number(data.online || 0).toLocaleString('th-TH');
+    $('#siteStats').hidden = false;
+}
+
+let statsTimer = null;
+function statsTick(first) {
+    if (!STATS_CONFIG.url || document.visibilityState !== 'visible') return;
+    statsRpc(first ? 'record_visit' : 'heartbeat', { p_client: clientId() })
+        .then(renderStatsCounts)
+        .catch(() => { if (first) $('#siteStats').hidden = true; });
+}
+
+function statsStart() {
+    if (!STATS_CONFIG.url) return;
+    clearInterval(statsTimer);
+    statsTick(true);
+    statsTimer = setInterval(() => statsTick(false), STATS_CONFIG.heartbeatSeconds * 1000);
+}
+
+function statsLeave() {
+    if (!STATS_CONFIG.url) return;
+    clearInterval(statsTimer);
+    const id = clientId();
+    if (!id || !navigator.sendBeacon) return;
+    // sendBeacon ใส่ header ไม่ได้ → ส่ง apikey เป็น query string แทน
+    navigator.sendBeacon(
+        `${STATS_CONFIG.url}/rest/v1/rpc/leave_presence?apikey=${encodeURIComponent(STATS_CONFIG.key)}`,
+        new Blob([JSON.stringify({ p_client: id })], { type: 'application/json' })
+    );
+}
+
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') statsStart();
+    else statsLeave();
+});
+window.addEventListener('pagehide', statsLeave);
+
 /* ─── Boot ─── */
 loadCache();
 loadData();
 loadConfigSheet();
+statsStart();
 
 /* ─── Light content guard (kept from the original build) ─── */
 document.addEventListener('contextmenu', e => {

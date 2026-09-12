@@ -2,7 +2,7 @@
    App shell: cache-first with background revalidate.
    Sheet data is JSONP from Google and is never cached here. */
 
-const VERSION = 'dmceu-ss15-v10';
+const VERSION = 'dmceu-ss15-v11';
 const SHELL = [
     './',
     'index.html',
@@ -40,7 +40,8 @@ self.addEventListener('fetch', event => {
     const url = new URL(req.url);
 
     // Never intercept the spreadsheet feed or other API calls.
-    if (url.hostname.indexOf('docs.google.com') > -1 || url.hostname.indexOf('geojs.io') > -1) return;
+    if (url.hostname.indexOf('docs.google.com') > -1 || url.hostname.indexOf('geojs.io') > -1 ||
+        url.hostname.indexOf('supabase.co') > -1) return;
 
     // Navigations: network first, fall back to the cached shell when offline.
     if (req.mode === 'navigate') {
