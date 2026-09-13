@@ -538,7 +538,7 @@ function renderStats(booked, available) {
     $('#progress-fill').style.width = pct + '%';
     $('#progress').setAttribute('aria-valuenow', String(pct));
     $('#progress-note').textContent = total
-        ? `ลงข้อมูลแล้ว ${pct}% · เหลืออีก ${available} คิวที่รอเจ้าภาพ`
+        ? `ลงข้อมูลแล้ว ${pct}% · เหลืออีก ${available} คิวที่รอลงข้อมูล`
         : 'ยังไม่มีข้อมูล';
 }
 
