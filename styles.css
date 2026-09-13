@@ -288,6 +288,15 @@ img { display: block; max-width: 100%; }
     animation: rise .5s var(--ease) both;
 }
 .next-card.visible { display: block; }
+.next-card.is-today {
+    background:
+        linear-gradient(var(--surface), var(--surface)) padding-box,
+        linear-gradient(135deg, var(--gold), var(--blue)) border-box;
+}
+.next-card.is-today .next-label { color: var(--gold-dim); }
+[data-theme="dark"] .next-card.is-today .next-label { color: var(--gold-light); }
+.next-card.is-today .next-count { background: rgba(201,162,39,.16); color: var(--gold-dim); }
+[data-theme="dark"] .next-card.is-today .next-count { color: var(--gold-light); }
 @keyframes rise { from { opacity: 0; transform: translateY(12px); } }
 
 .next-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }

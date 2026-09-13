@@ -420,12 +420,39 @@ function parseDateFromGs(cell) {
     return null;
 }
 
+/** คิวนี้จบไปแล้วหรือยัง — ถ้าเป็นวันนี้ ถือว่าจบเมื่อเลยเวลาเลิกถ่ายทอด (LIVE_CONFIG.end) */
+function sessionOver(date) {
+    if (!date) return false;
+    const z = nowInZone(LIVE_CONFIG.timeZone);
+    const today = new Date(z.y, z.m - 1, z.d).getTime();
+    const d = new Date(date); d.setHours(0, 0, 0, 0);
+    if (d.getTime() < today) return true;
+    if (d.getTime() === today) return z.minutes >= toMinutes(LIVE_CONFIG.end);
+    return false;
+}
+
 function getTimelineStatus(date, isNext) {
     if (!date) return { key: 'unknown', label: 'รอวันที่', note: 'ยังไม่ระบุวันที่' };
     const days = daysUntil(date);
-    if (days < 0)  return { key: 'past',   label: 'ผ่านไปแล้ว', note: 'สวดมนต์ผ่านไปแล้ว' };
-    if (isNext)    return { key: 'next',   label: 'คิวถัดไป',   note: relativeNote(days) };
+    if (sessionOver(date)) return { key: 'past', label: 'ผ่านไปแล้ว', note: 'สวดมนต์ผ่านไปแล้ว' };
+    if (isNext) return { key: 'next', label: days === 0 ? 'สวดมนต์วันนี้' : 'คิวถัดไป', note: relativeNote(days) };
     return { key: 'future', label: 'กำลังจะมาถึง', note: relativeNote(days) };
+}
+
+/** หาคิวถัดไปใหม่ (เรียกตอนโหลดข้อมูล และทุก 30 วิ เพื่อสลับคิวเมื่อของวันนี้จบ) */
+function refreshTimeline(force) {
+    let nextEvent = null;
+    allData.forEach(it => {
+        if (!it.parsedDate || sessionOver(it.parsedDate)) return;
+        if (!nextEvent || it.parsedDate < nextEvent.parsedDate) nextEvent = it;
+    });
+    const newNo = nextEvent ? nextEvent.no : null;
+    if (!force && newNo === nextQueueNo) return false;
+    nextQueueNo = newNo;
+    allData.forEach(it => { it.timelineStatus = getTimelineStatus(it.parsedDate, it.no === nextQueueNo); });
+    renderNext(nextEvent);
+    render();
+    return true;
 }
 
 function relativeNote(days) {
@@ -442,7 +469,6 @@ function applyRows(rows) {
 
     allData = [];
     let booked = 0, available = 0;
-    let nextEvent = null, minFuture = Infinity;
 
     rows.forEach(row => {
         if (!row || !row.c) return;
@@ -463,23 +489,14 @@ function applyRows(rows) {
         allData.push(item);
 
         item.available ? available++ : booked++;
-
-        if (item.parsedDate && daysUntil(item.parsedDate) >= 0 && item.parsedDate.getTime() < minFuture) {
-            minFuture = item.parsedDate.getTime();
-            nextEvent = item;
-        }
     });
 
     const dated = allData.filter(it => it.parsedDate).map(it => it.parsedDate.getTime());
     renderSeasonRange(dated.length ? new Date(Math.min.apply(null, dated)) : null,
                       dated.length ? new Date(Math.max.apply(null, dated)) : null);
 
-    nextQueueNo = nextEvent ? nextEvent.no : null;
-    allData.forEach(it => { it.timelineStatus = getTimelineStatus(it.parsedDate, it.no === nextQueueNo); });
-
     renderStats(booked, available);
-    renderNext(nextEvent);
-    render();
+    refreshTimeline(true);
     renderLive();
 
     if (rows.length && !allData.length) {
@@ -553,7 +570,11 @@ function renderNext(ev) {
     noEl.hidden = false;
 
     const days = daysUntil(ev.parsedDate);
-    $('#nq-countdown').textContent = days === null ? '' : relativeNote(days);
+    const isToday = days === 0;
+    $('#nq-label').textContent = isToday ? 'คิวสวดมนต์วันนี้' : 'คิวสวดมนต์ถัดไป';
+    $('#nq-countdown').textContent = days === null ? ''
+        : (isToday ? `${LIVE_CONFIG.start}–${LIVE_CONFIG.end} น.` : relativeNote(days));
+    card.classList.toggle('is-today', isToday);
 
     card.classList.add('visible');
 }
@@ -732,7 +753,7 @@ function buildTable(data) {
         const cls = ['row', 't-' + t.key, dow === 6 ? 'd-sat' : (dow === 0 ? 'd-sun' : ''), item.available ? 'is-open' : ''].join(' ');
         html += `<tr class="${cls}">
             <td class="c-no"><span class="no-pill">${esc(item.no)}</span></td>
-            <td class="c-date" title="${esc(item.date)}"><span class="date-main">${esc(dateShort)}</span><span class="date-note">${esc(t.key === 'next' ? 'คิวถัดไป' : t.note)}</span></td>
+            <td class="c-date" title="${esc(item.date)}"><span class="date-main">${esc(dateShort)}</span><span class="date-note">${esc(t.key === 'next' ? t.label : t.note)}</span></td>
             <td class="c-temple"><span class="status-dot ${item.available ? 'empty' : 'filled'}"></span>${esc(item.temple)}</td>
             <td class="c-round"><span class="cell-label">ครั้งที่</span>${esc(item.time)}</td>
             <td class="c-monk">${icon('user')}${item.monk === '-' ? '<span class="pending">รอลงชื่อพระอาจารย์</span>' : esc(item.monk)}</td>
@@ -899,7 +920,7 @@ if ('ResizeObserver' in window) new ResizeObserver(measureDock).observe($('#dock
 window.addEventListener('resize', measureDock);
 
 renderLive();
-setInterval(renderLive, 30000);
+setInterval(() => { if (allData.length) refreshTimeline(); renderLive(); }, 30000);
 
 /* ─── Control wiring ─── */
 let searchTimer = null;
@@ -1320,6 +1341,7 @@ window.addEventListener('appinstalled', () => { $('#installBar').hidden = true; 
 /* ─── Refresh when returning to the app ─── */
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
+    if (allData.length) refreshTimeline();
     renderLive();
     if (!lastSync || Date.now() - lastSync.getTime() > 5 * 60 * 1000) loadData();
 });
