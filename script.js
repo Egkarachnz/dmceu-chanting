@@ -201,7 +201,8 @@ const $$ = (s) => Array.prototype.slice.call(document.querySelectorAll(s));
 const thaiMonths = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const thaiDays   = ["วันอาทิตย์","วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์"];
 
-const state = { q: '', status: 'all', timeline: 'all' };
+const state = { q: '', status: 'all', timeline: 'all', view: 'cards' };   // view: cards | table
+try { if (localStorage.getItem('dmceu.ss15.view') === 'table') state.view = 'table'; } catch (e) {}
 let allData = [];
 let nextQueueNo = null;
 let lastSync = null;
@@ -581,10 +582,36 @@ function syncControls() {
     $$('.fchip').forEach(chip => {
         chip.classList.toggle('is-active', state[chip.dataset.filter] === chip.dataset.value);
     });
+    $$('.vt-btn').forEach(b => b.classList.toggle('is-active', b.dataset.view === state.view));
     let nav = 'all';
-    if (state.status === 'available') nav = 'available';
+    if (state.view === 'table') nav = 'table';
+    else if (state.status === 'available') nav = 'available';
     else if (state.timeline === 'upcoming') nav = 'upcoming';
     $$('.bn-item').forEach(b => b.classList.toggle('is-active', b.dataset.nav === nav));
+}
+
+function setView(view) {
+    state.view = view === 'table' ? 'table' : 'cards';
+    try { localStorage.setItem('dmceu.ss15.view', state.view); } catch (e) {}
+    render();
+}
+window.setView = setView;
+
+function listHeading(count) {
+    const q = state.q.trim();
+    let icon_ = 'grid', title = 'รายการทั้งหมด';
+    const parts = [];
+    if (state.status === 'available')      { icon_ = 'alert'; title = 'คิวที่ยังว่าง'; }
+    else if (state.status === 'booked')    { icon_ = 'check'; title = 'คิวที่ลงข้อมูลแล้ว'; }
+    if (state.timeline === 'upcoming')     { if (state.status === 'all') { icon_ = 'clock'; title = 'คิวที่กำลังจะถึง'; } else parts.push('กำลังจะถึง'); }
+    else if (state.timeline === 'past')    { if (state.status === 'all') { icon_ = 'check'; title = 'คิวที่ผ่านไปแล้ว'; } else parts.push('ผ่านไปแล้ว'); }
+    else if (state.timeline === 'unknown') { if (state.status === 'all') { icon_ = 'calendar'; title = 'คิวที่รอวันที่'; } else parts.push('รอวันที่'); }
+    if (q) { icon_ = 'search'; title = `ผลการค้นหา “${q}”`; }
+    if (state.view === 'table') {
+        parts.unshift(title === 'รายการทั้งหมด' ? 'ทั้งซีซั่น' : title);
+        icon_ = 'table'; title = 'ภาพรวมแบบตาราง';
+    }
+    return { icon: icon_, title: title, sub: [`${count} คิว`].concat(parts).join(' · ') };
 }
 
 function render() {
@@ -594,6 +621,11 @@ function render() {
     $('#result-count').textContent = allData.length
         ? `แสดง ${data.length} จาก ${allData.length} คิว`
         : '';
+
+    const head = listHeading(data.length);
+    $('#listTitle').innerHTML = icon(head.icon) + esc(head.title);
+    $('#listSub').textContent = head.sub;
+    $('#listHead').hidden = !allData.length;
 
     if (!data.length) {
         container.innerHTML = `
@@ -606,6 +638,8 @@ function render() {
             </div>`;
         return;
     }
+
+    if (state.view === 'table') { container.innerHTML = buildTable(data); return; }
 
     // Group Sat/Sun of the same weekend together
     const weekends = {};
@@ -658,6 +692,55 @@ function render() {
     }
 
     container.innerHTML = html;
+}
+
+
+/* ─── มุมมองตาราง (ภาพรวมเหมือนชีต) ─── */
+const thaiDaysShort = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
+const thaiMonthsFull = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                        'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+function buildTable(data) {
+    const rows = data.slice().sort((a, b) => {
+        const ta = a.parsedDate ? a.parsedDate.getTime() : Infinity;
+        const tb = b.parsedDate ? b.parsedDate.getTime() : Infinity;
+        return ta !== tb ? ta - tb : (+a.no || 0) - (+b.no || 0);
+    });
+
+    let html = `<div class="table-wrap"><table class="sheet">
+        <thead><tr>
+            <th class="c-no">#</th>
+            <th class="c-date">วันที่</th>
+            <th class="c-temple">วัดที่นำสวดมนต์</th>
+            <th class="c-round">ครั้งที่</th>
+            <th class="c-monk">พระอาจารย์เทศน์สอน</th>
+            <th class="c-topic">หัวข้อเทศน์สอน</th>
+        </tr></thead><tbody>`;
+
+    let lastMonth = null;
+    rows.forEach(item => {
+        const d = item.parsedDate;
+        const monthKey = d ? `${d.getFullYear()}-${d.getMonth()}` : 'none';
+        if (monthKey !== lastMonth) {
+            const label = d ? `${thaiMonthsFull[d.getMonth()]} ${d.getFullYear() + 543}` : 'ยังไม่ระบุวันที่';
+            html += `<tr class="month-row"><td colspan="6">${esc(label)}</td></tr>`;
+            lastMonth = monthKey;
+        }
+        const t = item.timelineStatus || getTimelineStatus(d, false);
+        const dateShort = d ? `${thaiDaysShort[d.getDay()]} ${d.getDate()} ${thaiMonths[d.getMonth()]}` : (item.date !== '-' ? item.date : '–');
+        const dow = d ? d.getDay() : null;
+        const cls = ['row', 't-' + t.key, dow === 6 ? 'd-sat' : (dow === 0 ? 'd-sun' : ''), item.available ? 'is-open' : ''].join(' ');
+        html += `<tr class="${cls}">
+            <td class="c-no"><span class="no-pill">${esc(item.no)}</span></td>
+            <td class="c-date" title="${esc(item.date)}"><span class="date-main">${esc(dateShort)}</span><span class="date-note">${esc(t.key === 'next' ? 'คิวถัดไป' : t.note)}</span></td>
+            <td class="c-temple"><span class="status-dot ${item.available ? 'empty' : 'filled'}"></span>${esc(item.temple)}</td>
+            <td class="c-round"><span class="cell-label">ครั้งที่</span>${esc(item.time)}</td>
+            <td class="c-monk">${icon('user')}${item.monk === '-' ? '<span class="pending">รอลงชื่อพระอาจารย์</span>' : esc(item.monk)}</td>
+            <td class="c-topic">${icon('book')}${item.topic === '-' ? '<span class="pending">รอหัวข้อเทศน์</span>' : esc(item.topic)}</td>
+        </tr>`;
+    });
+
+    return html + '</tbody></table></div>';
 }
 
 function buildCard(item, dayClass, dayLabel) {
@@ -843,6 +926,8 @@ $$('.fchip').forEach(chip => {
     });
 });
 
+$$('.vt-btn').forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
+
 $$('.bn-item').forEach(btn => {
     btn.addEventListener('click', () => {
         const nav = btn.dataset.nav;
@@ -851,22 +936,35 @@ $$('.bn-item').forEach(btn => {
             setTimeout(() => $('#searchInput').focus(), 260);
             return;
         }
+        if (nav === 'table') { setView('table'); scrollToList(true); return; }
+        state.view = 'cards';
+        try { localStorage.setItem('dmceu.ss15.view', 'cards'); } catch (e) {}
         if (nav === 'all')            { state.status = 'all'; state.timeline = 'all'; }
         else if (nav === 'upcoming')  { state.status = 'all'; state.timeline = 'upcoming'; }
         else if (nav === 'available') { state.status = 'available'; state.timeline = 'all'; }
         render();
-        scrollToList();
+        scrollToList(true);
     });
 });
 
-function scrollToList() {
+function scrollToList(force) {
     const controls = $('#controls');
     const y = controls.getBoundingClientRect().top + window.scrollY - stickyOffset() + 2;
-    if (window.scrollY > y) window.scrollTo({ top: y, behavior: 'smooth' });
+    if (force || window.scrollY > y) window.scrollTo({ top: y, behavior: 'smooth' });
 }
 function stickyOffset() {
     return $('#appbar').getBoundingClientRect().height;
 }
+function measureSticky() {
+    const h = stickyOffset() + $('#controls').getBoundingClientRect().height;
+    document.documentElement.style.setProperty('--sticky-top', Math.round(h) + 'px');
+}
+if ('ResizeObserver' in window) {
+    const ro = new ResizeObserver(measureSticky);
+    ro.observe($('#controls')); ro.observe($('#appbar'));
+}
+window.addEventListener('resize', measureSticky);
+measureSticky();
 
 function manualRefresh() {
     if (loading) return;
