@@ -2,12 +2,14 @@
    App shell: cache-first with background revalidate.
    Sheet data is JSONP from Google and is never cached here. */
 
-const VERSION = 'dmceu-ss15-v12';
+/* เวลาแก้ไฟล์ให้บัมพ์เลขนี้ และเลข ?v= ใน index.html ให้ตรงกัน */
+const ASSET_V = '13';
+const VERSION = 'dmceu-ss15-v' + ASSET_V;
 const SHELL = [
     './',
     'index.html',
-    'styles.css',
-    'script.js',
+    'styles.css?v=' + ASSET_V,
+    'script.js?v=' + ASSET_V,
     'manifest.webmanifest',
     'assets/logo-mark.png',
     'assets/icon-192.png',
@@ -19,7 +21,7 @@ const SHELL = [
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(VERSION)
-            .then(cache => cache.addAll(SHELL))
+            .then(cache => cache.addAll(SHELL.map(u => new Request(u, { cache: 'reload' }))))
             .then(() => self.skipWaiting())
             .catch(() => self.skipWaiting())
     );

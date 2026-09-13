@@ -986,7 +986,7 @@ select.field-input {
     left: 0; right: 0; bottom: 0;
     height: calc(var(--nav-h) + var(--sat-bottom));
     padding-bottom: var(--sat-bottom);
-    display: grid; grid-template-columns: repeat(5, 1fr);
+    display: flex;
     background: var(--glass);
     backdrop-filter: saturate(180%) blur(20px);
     -webkit-backdrop-filter: saturate(180%) blur(20px);
@@ -994,9 +994,10 @@ select.field-input {
 }
 @media (min-width: 861px) { .bottom-nav { display: none; } }
 .bn-item {
+    flex: 1 1 0; min-width: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
     font-size: 10.5px; font-weight: 400; color: var(--text-mute);
-    min-width: 0; white-space: nowrap;
+    white-space: nowrap;
     transition: color .2s;
     position: relative;
 }
