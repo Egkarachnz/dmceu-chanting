@@ -201,7 +201,7 @@ const $$ = (s) => Array.prototype.slice.call(document.querySelectorAll(s));
 const thaiMonths = ["ม.ค.","ก.พ.","มี.ค.","เม.ย.","พ.ค.","มิ.ย.","ก.ค.","ส.ค.","ก.ย.","ต.ค.","พ.ย.","ธ.ค."];
 const thaiDays   = ["วันอาทิตย์","วันจันทร์","วันอังคาร","วันพุธ","วันพฤหัสบดี","วันศุกร์","วันเสาร์"];
 
-const state = { q: '', status: 'all', timeline: 'all', view: 'cards' };   // view: cards | table
+const state = { q: '', status: 'all', timeline: 'all', view: 'cards', showPast: false };   // view: cards | table
 try { if (localStorage.getItem('dmceu.ss15.view') === 'table') state.view = 'table'; } catch (e) {}
 let allData = [];
 let nextQueueNo = null;
@@ -308,15 +308,20 @@ setInterval(updateClock, 20000);
 })();
 
 /* ─── Data loading (JSONP) ─── */
+let silentLoad = false;   // โหลดเบื้องหลัง (ไม่หมุนไอคอน ไม่เปลี่ยนข้อความสถานะ)
+let lastRowsSig = null;   // ลายเซ็นข้อมูลล่าสุด ไว้เช็คว่าชีตเปลี่ยนจริงไหม
+
 function setLoading(on) {
     loading = on;
-    $('#refreshBtn').classList.toggle('spinning', on);
+    if (!silentLoad) $('#refreshBtn').classList.toggle('spinning', on);
+    if (!on) silentLoad = false;
 }
 
-function loadData(manual) {
+function loadData(manual, silent) {
     if (loading) return;
+    silentLoad = !!silent;
     setLoading(true);
-    updateSyncNote(manual ? 'กำลังอัปเดต…' : '');
+    if (!silent) updateSyncNote(manual ? 'กำลังอัปเดต…' : '');
 
     const s = document.createElement('script');
     s.src = sheetUrl(currentSource()) + '&_=' + Date.now();
@@ -331,6 +336,7 @@ function loadData(manual) {
 
 function processSheetData(response) {
     clearTimeout(loadTimer);
+    const wasSilent = silentLoad;
     setLoading(false);
 
     if (!response || response.status === 'error' || !response.table) {
@@ -338,22 +344,31 @@ function processSheetData(response) {
         return;
     }
     const rows = response.table.rows || [];
+    const sig = String(response.sig || '') + ':' + rows.length;
+    lastSync = new Date();
+
+    // ข้อมูลเหมือนเดิม → ไม่ต้องวาดหน้าใหม่ให้กะพริบ
+    if (sig === lastRowsSig && allData.length) { updateSyncNote(); return; }
+    const isChange = lastRowsSig !== null && allData.length > 0;
+    lastRowsSig = sig;
+
     try {
         localStorage.setItem(cacheKey(), JSON.stringify({ ts: Date.now(), rows: rows }));
     } catch (e) { /* quota — ignore */ }
 
-    lastSync = new Date();
     applyRows(rows);
     updateSyncNote();
+    if (isChange && wasSilent) toast('ข้อมูลในตารางอัปเดตแล้ว');
 }
 window.processSheetData = processSheetData;
 
 function handleScriptError() {
     clearTimeout(loadTimer);
+    const wasSilent = silentLoad;
     setLoading(false);
     if (allData.length) {
         updateSyncNote('อัปเดตไม่สำเร็จ · แสดงข้อมูลที่บันทึกไว้', true);
-        toast('เชื่อมต่อไม่สำเร็จ · แสดงข้อมูลล่าสุดที่บันทึกไว้');
+        if (!wasSilent) toast('เชื่อมต่อไม่สำเร็จ · แสดงข้อมูลล่าสุดที่บันทึกไว้');   // โหลดเบื้องหลังพลาดไม่ต้องเด้งเตือน
         return;
     }
     $('#cards-container').innerHTML = `
@@ -662,7 +677,37 @@ function render() {
 
     if (state.view === 'table') { container.innerHTML = buildTable(data); return; }
 
-    // Group Sat/Sun of the same weekend together
+    // มุมมองการ์ด: พับคิวที่ผ่านไปแล้วไว้ (เฉพาะตอนดู "ทุกช่วง" และไม่ได้ค้นหา)
+    const collapsible = state.timeline === 'all' && !state.q.trim();
+    const past = collapsible ? data.filter(it => it.timelineStatus && it.timelineStatus.key === 'past') : [];
+    const current = collapsible ? data.filter(it => !(it.timelineStatus && it.timelineStatus.key === 'past')) : data;
+
+    let html = '';
+    if (past.length) {
+        html += `<button class="past-toggle ${state.showPast ? 'is-open' : ''}" type="button" onclick="togglePast()"
+                    aria-expanded="${state.showPast ? 'true' : 'false'}">
+            ${icon('check')}
+            <span class="past-toggle-text"><strong>ผ่านไปแล้ว ${past.length} คิว</strong>
+                <small>${state.showPast ? 'แตะเพื่อซ่อน' : 'แตะเพื่อดูย้อนหลัง'}</small></span>
+            <span class="past-toggle-arrow">${icon('arrow-up')}</span>
+        </button>`;
+        if (state.showPast) html += `<div class="past-block">${buildCardSections(past)}</div>`;
+    }
+    html += buildCardSections(current);
+    if (!current.length && past.length && !state.showPast) {
+        html += `<div class="state small">${icon('calendar')}<strong>ไม่มีคิวที่กำลังจะมาถึง</strong><p>คิวทั้งหมดผ่านไปแล้ว แตะด้านบนเพื่อดูย้อนหลัง</p></div>`;
+    }
+    container.innerHTML = html;
+}
+
+function togglePast() {
+    state.showPast = !state.showPast;
+    render();
+}
+window.togglePast = togglePast;
+
+/** จัดกลุ่มการ์ดเป็นสุดสัปดาห์ (ส.+อา.) และรายการอื่น ๆ */
+function buildCardSections(data) {
     const weekends = {};
     const others = [];
     data.forEach(item => {
@@ -711,8 +756,7 @@ function render() {
             </div>
         </section>`;
     }
-
-    container.innerHTML = html;
+    return html;
 }
 
 
@@ -1259,6 +1303,7 @@ function applySource(value) {
 function switchSource(message) {
     allData = [];
     lastSync = null;
+    lastRowsSig = null;
     $('#next-queue-banner').classList.remove('visible');
     $('#cards-container').innerHTML =
         '<div class="state">' + icon('refresh') + '<strong>กำลังโหลดข้อมูล…</strong></div>';
@@ -1299,9 +1344,56 @@ window.addEventListener('scroll', () => {
 
 scrollBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
 
-/* ─── PWA: service worker + install ─── */
+/* ─── PWA: service worker + อัปเดตแอปอัตโนมัติ ───
+   · ตรวจหาเวอร์ชันใหม่ตอนเปิด, ทุก 30 นาที และทุกครั้งที่กลับเข้าแอป
+   · พอเวอร์ชันใหม่ติดตั้งเสร็จ → รีโหลดหน้าให้เอง (รอถ้ากำลังพิมพ์/เปิดหน้าต่างตั้งค่าอยู่)
+   · หลังรีโหลดขึ้น toast บอกว่าอัปเดตแล้ว */
+const UPDATED_FLAG = 'dmceu.ss15.justUpdated';
+let swReg = null;
+let updatePending = false;
+
+function userIsBusy() {
+    const a = document.activeElement;
+    const typing = a && (a.tagName === 'INPUT' || a.tagName === 'TEXTAREA' || a.tagName === 'SELECT');
+    const modalOpen = $$('dialog[open]').length > 0;
+    return typing || modalOpen;
+}
+
+function applyUpdateNow() {
+    if (!updatePending) return;
+    if (userIsBusy()) { setTimeout(applyUpdateNow, 15000); return; }   // รอจนว่างค่อยรีโหลด
+    updatePending = false;
+    try { sessionStorage.setItem(UPDATED_FLAG, '1'); } catch (e) {}
+    location.reload();
+}
+
 if ('serviceWorker' in navigator && location.protocol.indexOf('http') === 0) {
-    window.addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch(() => {}));
+    const hadController = !!navigator.serviceWorker.controller;   // ครั้งแรกที่ติดตั้งไม่ต้องรีโหลด
+
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!hadController) return;
+        updatePending = true;
+        applyUpdateNow();
+    });
+
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').then(reg => {
+            swReg = reg;
+            reg.update().catch(() => {});
+            setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+        }).catch(() => {});
+    });
+
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible' && swReg) swReg.update().catch(() => {});
+    });
+
+    try {
+        if (sessionStorage.getItem(UPDATED_FLAG)) {
+            sessionStorage.removeItem(UPDATED_FLAG);
+            setTimeout(() => toast('อัปเดตแอปเป็นเวอร์ชันล่าสุดแล้ว'), 900);
+        }
+    } catch (e) {}
 }
 
 const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -1343,7 +1435,8 @@ document.addEventListener('visibilitychange', () => {
     if (document.visibilityState !== 'visible') return;
     if (allData.length) refreshTimeline();
     renderLive();
-    if (!lastSync || Date.now() - lastSync.getTime() > 5 * 60 * 1000) loadData();
+    if (!lastSync || Date.now() - lastSync.getTime() > 20 * 1000) loadData(false, true);
+    if (!lastSync || Date.now() - lastSync.getTime() > 5 * 60 * 1000) loadConfigSheet();
 });
 
 
@@ -1412,6 +1505,20 @@ document.addEventListener('visibilitychange', () => {
     else statsLeave();
 });
 window.addEventListener('pagehide', statsLeave);
+
+/* ─── อัปเดตอัตโนมัติขณะเปิดหน้าอยู่ ───
+   · ตารางคิว: เช็คชีตทุก 30 วินาที แบบเงียบ วาดหน้าใหม่เฉพาะตอนข้อมูลเปลี่ยนจริง
+   · แท็บ config (เวลา Live ฯลฯ): ทุก 5 นาที */
+const AUTO_REFRESH_MS = 30 * 1000;
+const CONFIG_REFRESH_MS = 5 * 60 * 1000;
+setInterval(() => {
+    if (document.visibilityState !== 'visible' || !navigator.onLine || loading) return;
+    loadData(false, true);
+}, AUTO_REFRESH_MS);
+setInterval(() => {
+    if (document.visibilityState !== 'visible' || !navigator.onLine) return;
+    loadConfigSheet();
+}, CONFIG_REFRESH_MS);
 
 /* ─── Boot ─── */
 loadCache();

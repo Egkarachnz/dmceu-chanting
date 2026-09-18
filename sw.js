@@ -3,7 +3,7 @@
    Sheet data is JSONP from Google and is never cached here. */
 
 /* เวลาแก้ไฟล์ให้บัมพ์เลขนี้ และเลข ?v= ใน index.html ให้ตรงกัน */
-const ASSET_V = '15';
+const ASSET_V = '16';
 const VERSION = 'dmceu-ss15-v' + ASSET_V;
 const SHELL = [
     './',
