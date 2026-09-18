@@ -1015,7 +1015,9 @@ $$('.bn-item').forEach(btn => {
 function scrollToList(force) {
     const controls = $('#controls');
     const y = controls.getBoundingClientRect().top + window.scrollY - stickyOffset() + 2;
-    if (force || window.scrollY > y) window.scrollTo({ top: y, behavior: 'smooth' });
+    // กดแท็บ → กระโดดไปทันที: การเลื่อนแบบอนิเมชันทำให้แถบ sticky บน iOS สั่นระหว่างเลื่อน
+    if (force) { window.scrollTo({ top: y, behavior: 'instant' }); return; }
+    if (window.scrollY > y) window.scrollTo({ top: y, behavior: 'smooth' });
 }
 function stickyOffset() {
     return $('#appbar').getBoundingClientRect().height;
