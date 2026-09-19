@@ -873,6 +873,7 @@ function renderEvents(container) {
             <p>ทีมงานเพิ่มรูปได้ที่หน้าหลังบ้าน (admin.html) หรือชีตแท็บ “${esc(EVENTS_SHEET_TAB)}”</p></div>`;
         return;
     }
+    prefetchEventFiles();
     container.innerHTML = `<div class="events-grid">${items.map((ev, i) => `
         <article class="event-card">
             <a class="event-img" href="${esc(ev.image)}" data-idx="${i}" onclick="return openImage(${i})">
@@ -900,25 +901,59 @@ function fileNameFor(ev) {
     const ext = (ev.image.match(/\.(png|jpe?g|webp|gif)(\?|$)/i) || [, 'jpg'])[1].toLowerCase();
     return `${base}.${ext === 'jpeg' ? 'jpg' : ext}`;
 }
+/* แคชไฟล์รูปไว้ล่วงหน้า — iOS อนุญาตให้เปิดแผ่นแชร์เฉพาะ "ตอนแตะ" ทันที
+   ถ้ารอโหลดรูปก่อน (await) แล้วค่อยเรียกแชร์ ระบบจะเงียบไม่เปิดอะไรเลย */
+const eventFiles = new Map();        // image url → File (พร้อมใช้)
+const eventFileLoads = new Map();    // image url → Promise<File>
+function loadEventFile(ev) {
+    if (eventFiles.has(ev.image)) return Promise.resolve(eventFiles.get(ev.image));
+    if (eventFileLoads.has(ev.image)) return eventFileLoads.get(ev.image);
+    const p = fetch(ev.image, { mode: 'cors' })
+        .then(res => { if (!res.ok) throw new Error('fetch ' + res.status); return res.blob(); })
+        .then(blob => {
+            const file = new File([blob], fileNameFor(ev), { type: blob.type || 'image/jpeg' });
+            eventFiles.set(ev.image, file);
+            return file;
+        })
+        .catch(e => { eventFileLoads.delete(ev.image); throw e; });
+    eventFileLoads.set(ev.image, p);
+    return p;
+}
+function prefetchEventFiles() {
+    if (!isTouch || !navigator.canShare) return;
+    const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
+    items.slice(0, 6).forEach(ev => loadEventFile(ev).catch(() => {}));
+}
+const canShareFile = file => !!(navigator.canShare && file && navigator.canShare({ files: [file] }));
+
+/** เปิดแผ่นแชร์พร้อมไฟล์รูป — ต้องเรียกภายในเหตุการณ์แตะ (ห้ามมี await ก่อนหน้า) */
+async function shareFile(file, title) {
+    try { await navigator.share({ files: [file], title }); return true; }
+    catch (e) {
+        if (e && e.name === 'AbortError') return true;        // ผู้ใช้ปิดแผ่นแชร์เอง
+        return false;                                          // NotAllowedError ฯลฯ
+    }
+}
+
 async function downloadImage(i, btn) {
     const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
     const ev = items[i];
     if (!ev) return;
+    const title = ev.title || 'ตารางกิจกรรม';
+
+    // มือถือ + รูปพร้อมแล้ว → เปิดแผ่นแชร์ทันที (มี "บันทึกรูปภาพ")
+    const ready = eventFiles.get(ev.image);
+    if (isTouch && canShareFile(ready)) { await shareFile(ready, title); return; }
+
     if (btn) btn.classList.add('busy');
     try {
-        const res = await fetch(ev.image, { mode: 'cors' });
-        if (!res.ok) throw new Error('fetch ' + res.status);
-        const blob = await res.blob();
-        const name = fileNameFor(ev);
-        const file = new File([blob], name, { type: blob.type || 'image/jpeg' });
-
-        if (isTouch && navigator.canShare && navigator.canShare({ files: [file] })) {
-            try { await navigator.share({ files: [file], title: ev.title || 'ตารางกิจกรรม' }); }
-            catch (e) { if (e && e.name !== 'AbortError') throw e; }   // ผู้ใช้กดยกเลิก = ไม่ใช่ error
+        const file = await loadEventFile(ev);
+        if (isTouch && canShareFile(file)) {
+            if (!(await shareFile(file, title))) toast('รูปพร้อมแล้ว · แตะปุ่มอีกครั้ง');
         } else {
-            const url = URL.createObjectURL(blob);
+            const url = URL.createObjectURL(file);
             const a = document.createElement('a');
-            a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+            a.href = url; a.download = file.name; document.body.appendChild(a); a.click(); a.remove();
             setTimeout(() => URL.revokeObjectURL(url), 4000);
             toast('กำลังดาวน์โหลดรูป…');
         }
@@ -955,34 +990,47 @@ function openShare(network, url, text) {
 }
 function shareApp(network) { openShare(network, appUrl(''), APP_TITLE); }
 const NET_LABEL = { facebook: 'Facebook', line: 'LINE' };
+/** ลิงก์เปิดแอป Facebook / LINE โดยตรง (มือถือ) พร้อมลิงก์รูป — ใช้เมื่อส่งไฟล์ไม่ได้ */
+function appDeepLink(network, url, text) {
+    const u = encodeURIComponent(url), t = encodeURIComponent(text);
+    if (network === 'line') return `https://line.me/R/share?text=${encodeURIComponent(text + '\n' + url)}`;
+    if (network === 'facebook') return `https://www.facebook.com/sharer/sharer.php?u=${u}&quote=${t}`;
+    return '';
+}
 async function shareEvent(i, network, btn) {
     const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
     const ev = items[i];
     if (!ev) return;
     const title = ev.title || 'ตารางกิจกรรม';
     const imageAbs = new URL(ev.image, location.href).href;
+    const label = NET_LABEL[network] || 'แอป';
 
-    // มือถือ: ส่งเป็นไฟล์รูปจริง ๆ ผ่านแผ่นแชร์ → ผู้ใช้เลือก Facebook / LINE ในนั้น
     if (isTouch && navigator.canShare) {
-        if (btn) btn.classList.add('busy');
-        try {
-            const res = await fetch(ev.image, { mode: 'cors' });
-            if (!res.ok) throw new Error('fetch ' + res.status);
-            const blob = await res.blob();
-            const file = new File([blob], fileNameFor(ev), { type: blob.type || 'image/jpeg' });
-            if (navigator.canShare({ files: [file] })) {
-                toast(`เลือก ${NET_LABEL[network] || 'แอป'} ในแผ่นแชร์`);
-                try { await navigator.share({ files: [file], title }); }
-                catch (e) { if (e && e.name !== 'AbortError') throw e; }
-                return;
-            }
-        } catch (e) {
-            /* ส่งไฟล์ไม่ได้ (เช่นรูปข้ามเว็บ) → แชร์เป็นลิงก์รูปแทน */
-        } finally {
-            if (btn) btn.classList.remove('busy');
+        // 1) รูปโหลดไว้แล้ว → เปิดแผ่นแชร์พร้อมไฟล์ทันที (ยังอยู่ในเหตุการณ์แตะ)
+        const ready = eventFiles.get(ev.image);
+        if (canShareFile(ready)) {
+            toast(`เลือก ${label} ในแผ่นแชร์`);
+            if (await shareFile(ready, title)) return;
         }
+        // 2) ยังไม่พร้อม → โหลดก่อน แล้วลองเปิดแผ่นแชร์ (บางเครื่องยังยอม) ไม่งั้นบอกให้แตะซ้ำ
+        if (!ready) {
+            if (btn) btn.classList.add('busy');
+            try {
+                const file = await loadEventFile(ev);
+                if (canShareFile(file)) {
+                    toast(`เลือก ${label} ในแผ่นแชร์`);
+                    if (await shareFile(file, title)) return;
+                    toast('รูปพร้อมแล้ว · แตะปุ่มอีกครั้งเพื่อแชร์');
+                    return;
+                }
+            } catch (e) { /* โหลดไฟล์ไม่ได้ → ส่งเป็นลิงก์รูปแทน */ }
+            finally { if (btn) btn.classList.remove('busy'); }
+        }
+        // 3) ส่งไฟล์ไม่ได้ → เปิดแอปโดยตรงพร้อมลิงก์รูป (ไม่ใช้ window.open เพราะโดนบล็อกหลัง await)
+        location.href = appDeepLink(network, imageAbs, title);
+        return;
     }
-    // คอม / เบราว์เซอร์ที่ส่งไฟล์ไม่ได้: แชร์ลิงก์รูปโดยตรง (Facebook/LINE จะแสดงเป็นรูปให้)
+    // คอม: แชร์ลิงก์รูปโดยตรง (Facebook/LINE จะแสดงเป็นรูปให้)
     openShare(network, imageAbs, title);
 }
 window.shareApp = shareApp;
