@@ -886,8 +886,6 @@ function renderEvents(container) {
                 ${ev.desc ? `<p class="event-desc">${esc(ev.desc)}</p>` : ''}
                 <div class="event-actions">
                     <button class="event-dl" type="button" onclick="downloadImage(${i}, this)">${icon('download')} ดาวน์โหลดรูป</button>
-                    <button class="event-share fb" type="button" onclick="shareEvent(${i}, 'facebook', this)" title="แชร์รูปไป Facebook">${icon('facebook')} แชร์รูป</button>
-                    <button class="event-share line" type="button" onclick="shareEvent(${i}, 'line', this)" title="แชร์รูปไป LINE">${icon('line')} แชร์รูป</button>
                     ${ev.link ? `<a class="event-link" href="${esc(ev.link)}" target="_blank" rel="noopener">${icon('link')} เปิดลิงก์เพิ่มเติม</a>` : ''}
                 </div>
             </div>
@@ -967,81 +965,10 @@ async function downloadImage(i, btn) {
 }
 window.downloadImage = downloadImage;
 
-/* ─── แชร์ไป Facebook / LINE ───
-   · รูปกิจกรรม: มือถือส่ง "ไฟล์รูป" ผ่านแผ่นแชร์ของเครื่อง (เลือก Facebook/LINE ได้) · คอมแชร์ลิงก์รูปโดยตรง
-   · ท้ายหน้า: แชร์ลิงก์แอป */
-const APP_TITLE = 'ตารางวัดนำสวดมนต์ · บ้านกัลยาณมิตรทวีปยุโรป SS16';
-function appUrl(hash) {
-    return location.origin + location.pathname.replace(/index\.html$/, '') + (hash ? '#' + hash : '');
-}
-function openShare(network, url, text) {
-    const u = encodeURIComponent(url), t = encodeURIComponent(text);
-    const target =
-        network === 'facebook' ? `https://www.facebook.com/sharer/sharer.php?u=${u}&quote=${t}` :
-        network === 'line'     ? `https://social-plugins.line.me/lineit/share?url=${u}&text=${t}` : '';
-    if (network === 'native') {
-        if (navigator.share) navigator.share({ title: text, text, url }).catch(() => {});
-        return;
-    }
-    if (!target) return;
-    // มือถือ: เปิดแท็บใหม่ (ระบบจะเด้งเข้าแอป Facebook/LINE เอง) · คอม: หน้าต่างเล็ก
-    if (isTouch) window.open(target, '_blank', 'noopener');
-    else window.open(target, 'share', 'noopener,width=640,height=560,left=' + Math.max(0, (screen.width - 640) / 2) + ',top=' + Math.max(0, (screen.height - 560) / 2));
-}
-function shareApp(network) { openShare(network, appUrl(''), APP_TITLE); }
-const NET_LABEL = { facebook: 'Facebook', line: 'LINE' };
-/** ลิงก์เปิดแอป Facebook / LINE โดยตรง (มือถือ) พร้อมลิงก์รูป — ใช้เมื่อส่งไฟล์ไม่ได้ */
-function appDeepLink(network, url, text) {
-    const u = encodeURIComponent(url), t = encodeURIComponent(text);
-    if (network === 'line') return `https://line.me/R/share?text=${encodeURIComponent(text + '\n' + url)}`;
-    if (network === 'facebook') return `https://www.facebook.com/sharer/sharer.php?u=${u}&quote=${t}`;
-    return '';
-}
-async function shareEvent(i, network, btn) {
-    const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
-    const ev = items[i];
-    if (!ev) return;
-    const title = ev.title || 'ตารางกิจกรรม';
-    const imageAbs = new URL(ev.image, location.href).href;
-    const label = NET_LABEL[network] || 'แอป';
-
-    if (isTouch && navigator.canShare) {
-        // 1) รูปโหลดไว้แล้ว → เปิดแผ่นแชร์พร้อมไฟล์ทันที (ยังอยู่ในเหตุการณ์แตะ)
-        const ready = eventFiles.get(ev.image);
-        if (canShareFile(ready)) {
-            toast(`เลือก ${label} ในแผ่นแชร์`);
-            if (await shareFile(ready, title)) return;
-        }
-        // 2) ยังไม่พร้อม → โหลดก่อน แล้วลองเปิดแผ่นแชร์ (บางเครื่องยังยอม) ไม่งั้นบอกให้แตะซ้ำ
-        if (!ready) {
-            if (btn) btn.classList.add('busy');
-            try {
-                const file = await loadEventFile(ev);
-                if (canShareFile(file)) {
-                    toast(`เลือก ${label} ในแผ่นแชร์`);
-                    if (await shareFile(file, title)) return;
-                    toast('รูปพร้อมแล้ว · แตะปุ่มอีกครั้งเพื่อแชร์');
-                    return;
-                }
-            } catch (e) { /* โหลดไฟล์ไม่ได้ → ส่งเป็นลิงก์รูปแทน */ }
-            finally { if (btn) btn.classList.remove('busy'); }
-        }
-        // 3) ส่งไฟล์ไม่ได้ → เปิดแอปโดยตรงพร้อมลิงก์รูป (ไม่ใช้ window.open เพราะโดนบล็อกหลัง await)
-        location.href = appDeepLink(network, imageAbs, title);
-        return;
-    }
-    // คอม: แชร์ลิงก์รูปโดยตรง (Facebook/LINE จะแสดงเป็นรูปให้)
-    openShare(network, imageAbs, title);
-}
-window.shareApp = shareApp;
-window.shareEvent = shareEvent;
-if (navigator.share) $('#shareMore').hidden = false;
 
 const imgModal = $('#imgModal');
 let imgModalIndex = 0;
 $('#imgDownload').addEventListener('click', () => downloadImage(imgModalIndex, $('#imgDownload')));
-$('#imgShareFb').addEventListener('click', () => shareEvent(imgModalIndex, 'facebook', $('#imgShareFb')));
-$('#imgShareLine').addEventListener('click', () => shareEvent(imgModalIndex, 'line', $('#imgShareLine')));
 function openImage(i) {
     imgModalIndex = i;
     const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
@@ -1426,7 +1353,7 @@ $('#adminKnock').addEventListener('click', () => {
     if (knocks >= 5) { knocks = 0; openAdminModal(); }
 });
 
-/* ทางเข้า 2: ต่อท้าย URL ด้วย #admin · ลิงก์ที่แชร์ต่อท้าย #events / #table เปิดมาที่หน้านั้นเลย */
+/* ทางเข้า 2: ต่อท้าย URL ด้วย #admin · ต่อท้าย #events / #table เปิดมาที่หน้านั้นเลย */
 function checkAdminHash() {
     const h = location.hash.toLowerCase();
     if (h === '#events' || h === '#table') {
@@ -1804,12 +1731,15 @@ function statsLeave() {
     if (!STATS_CONFIG.url) return;
     clearInterval(statsTimer);
     const id = clientId();
-    if (!id || !navigator.sendBeacon) return;
-    // sendBeacon ใส่ header ไม่ได้ → ส่ง apikey เป็น query string แทน
-    navigator.sendBeacon(
-        `${STATS_CONFIG.url}/rest/v1/rpc/leave_presence?apikey=${encodeURIComponent(STATS_CONFIG.key)}`,
-        new Blob([JSON.stringify({ p_client: id })], { type: 'application/json' })
-    );
+    if (!id) return;
+    // ใช้ fetch keepalive แทน sendBeacon: sendBeacon ส่งแบบมี credentials ทำให้ติด CORS ของ Supabase
+    try {
+        fetch(`${STATS_CONFIG.url}/rest/v1/rpc/leave_presence`, {
+            method: 'POST', keepalive: true, credentials: 'omit',
+            headers: { apikey: STATS_CONFIG.key, 'Content-Type': 'application/json' },
+            body: JSON.stringify({ p_client: id })
+        }).catch(() => {});
+    } catch (e) {}
 }
 
 document.addEventListener('visibilitychange', () => {
