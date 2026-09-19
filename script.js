@@ -885,6 +885,8 @@ function renderEvents(container) {
                 ${ev.desc ? `<p class="event-desc">${esc(ev.desc)}</p>` : ''}
                 <div class="event-actions">
                     <button class="event-dl" type="button" onclick="downloadImage(${i}, this)">${icon('download')} ดาวน์โหลดรูป</button>
+                    <button class="event-share fb" type="button" onclick="shareEvent(${i}, 'facebook')" title="แชร์ไป Facebook">${icon('facebook')} แชร์</button>
+                    <button class="event-share line" type="button" onclick="shareEvent(${i}, 'line')" title="แชร์ไป LINE">${icon('line')} แชร์</button>
                     ${ev.link ? `<a class="event-link" href="${esc(ev.link)}" target="_blank" rel="noopener">${icon('link')} เปิดลิงก์เพิ่มเติม</a>` : ''}
                 </div>
             </div>
@@ -930,9 +932,42 @@ async function downloadImage(i, btn) {
 }
 window.downloadImage = downloadImage;
 
+/* ─── แชร์ไป Facebook / LINE ───
+   แชร์เป็นลิงก์หน้าเว็บ (ต่อท้าย #events ให้เปิดมาที่หน้ากิจกรรมเลย) เพราะ Facebook/LINE รับเป็นลิงก์เท่านั้น */
+const APP_TITLE = 'ตารางวัดนำสวดมนต์ · บ้านกัลยาณมิตรทวีปยุโรป SS16';
+function appUrl(hash) {
+    return location.origin + location.pathname.replace(/index\.html$/, '') + (hash ? '#' + hash : '');
+}
+function openShare(network, url, text) {
+    const u = encodeURIComponent(url), t = encodeURIComponent(text);
+    const target =
+        network === 'facebook' ? `https://www.facebook.com/sharer/sharer.php?u=${u}&quote=${t}` :
+        network === 'line'     ? `https://social-plugins.line.me/lineit/share?url=${u}&text=${t}` : '';
+    if (network === 'native') {
+        if (navigator.share) navigator.share({ title: text, text, url }).catch(() => {});
+        return;
+    }
+    if (!target) return;
+    // มือถือ: เปิดแท็บใหม่ (ระบบจะเด้งเข้าแอป Facebook/LINE เอง) · คอม: หน้าต่างเล็ก
+    if (isTouch) window.open(target, '_blank', 'noopener');
+    else window.open(target, 'share', 'noopener,width=640,height=560,left=' + Math.max(0, (screen.width - 640) / 2) + ',top=' + Math.max(0, (screen.height - 560) / 2));
+}
+function shareApp(network) { openShare(network, appUrl(''), APP_TITLE); }
+function shareEvent(i, network) {
+    const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
+    const ev = items[i];
+    const text = ev && ev.title ? `${ev.title} · ${APP_TITLE}` : APP_TITLE;
+    openShare(network, appUrl('events'), text);
+}
+window.shareApp = shareApp;
+window.shareEvent = shareEvent;
+if (navigator.share) $('#shareMore').hidden = false;
+
 const imgModal = $('#imgModal');
 let imgModalIndex = 0;
 $('#imgDownload').addEventListener('click', () => downloadImage(imgModalIndex, $('#imgDownload')));
+$('#imgShareFb').addEventListener('click', () => shareEvent(imgModalIndex, 'facebook'));
+$('#imgShareLine').addEventListener('click', () => shareEvent(imgModalIndex, 'line'));
 function openImage(i) {
     imgModalIndex = i;
     const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
@@ -1317,9 +1352,17 @@ $('#adminKnock').addEventListener('click', () => {
     if (knocks >= 5) { knocks = 0; openAdminModal(); }
 });
 
-/* ทางเข้า 2: ต่อท้าย URL ด้วย #admin */
+/* ทางเข้า 2: ต่อท้าย URL ด้วย #admin · ลิงก์ที่แชร์ต่อท้าย #events / #table เปิดมาที่หน้านั้นเลย */
 function checkAdminHash() {
-    if (location.hash.toLowerCase() !== '#admin') return;
+    const h = location.hash.toLowerCase();
+    if (h === '#events' || h === '#table') {
+        history.replaceState(null, '', location.pathname + location.search);
+        setView(h.slice(1));
+        syncControls();
+        scrollToList(true);
+        return;
+    }
+    if (h !== '#admin') return;
     history.replaceState(null, '', location.pathname + location.search);
     openAdminModal();
 }
