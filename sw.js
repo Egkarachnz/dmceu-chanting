@@ -3,7 +3,7 @@
    Sheet data is JSONP from Google and is never cached here. */
 
 /* เวลาแก้ไฟล์ให้บัมพ์เลขนี้ และเลข ?v= ใน index.html ให้ตรงกัน */
-const ASSET_V = '17';
+const ASSET_V = '18';
 const VERSION = 'dmceu-ss15-v' + ASSET_V;
 const SHELL = [
     './',
@@ -15,7 +15,8 @@ const SHELL = [
     'assets/icon-192.png',
     'assets/icon-512.png',
     'assets/apple-touch-icon.png',
-    'assets/favicon-64.png'
+    'assets/favicon-64.png',
+    'assets/events/schedule-ss16.jpg'
 ];
 
 self.addEventListener('install', event => {

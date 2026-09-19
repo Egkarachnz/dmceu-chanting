@@ -97,6 +97,22 @@ const LIVE_DEFAULTS = {
 const SEASON_LABEL = 'ซีซั่นที่ 16';
 
 /* ────────────────────────────────────────────────────────────
+   หน้า "กิจกรรม" — รูปโปสเตอร์ตารางกิจกรรม
+   แอดมินใส่ในชีตแท็บชื่อ "กิจกรรม" (คอลัมน์: A=หัวข้อ B=ลิงก์รูป C=รายละเอียด D=ลิงก์เพิ่มเติม)
+   ลิงก์รูปใช้ได้ทั้งลิงก์แชร์จาก Google Drive และลิงก์รูปตรง ๆ (.jpg/.png)
+   ถ้าในชีตยังไม่มี จะใช้รายการตั้งต้นข้างล่างนี้
+   ──────────────────────────────────────────────────────────── */
+const EVENTS_SHEET_TAB = 'กิจกรรม';
+const EVENTS_DEFAULT = [
+    {
+        title: 'กำหนดการกิจกรรมบ้านกัลยาณมิตร',
+        image: 'assets/events/schedule-ss16.jpg',
+        desc: 'สามัคคีธรรมสวดมนต์ทวีปยุโรป SS16 · ทุกครั้งเริ่ม 18:30 น. (เวลายุโรปกลาง)',
+        link: ''
+    }
+];
+
+/* ────────────────────────────────────────────────────────────
    ตัวนับคนเข้าชม / คนออนไลน์ (Supabase โปรเจกต์ dmceu-chanting)
    · key เป็น publishable key ใส่ในหน้าเว็บได้ตามปกติ
    · ตารางถูกล็อกไว้ เรียกได้เฉพาะฟังก์ชัน record_visit / heartbeat / leave_presence
@@ -620,15 +636,16 @@ function syncControls() {
     });
     $$('.vt-btn').forEach(b => b.classList.toggle('is-active', b.dataset.view === state.view));
     let nav = 'all';
-    if (state.view === 'table') nav = 'table';
+    if (state.view === 'events') nav = 'events';
+    else if (state.view === 'table') nav = 'table';
     else if (state.status === 'available') nav = 'available';
     else if (state.timeline === 'upcoming') nav = 'upcoming';
     $$('.bn-item').forEach(b => b.classList.toggle('is-active', b.dataset.nav === nav));
 }
 
 function setView(view) {
-    state.view = view === 'table' ? 'table' : 'cards';
-    try { localStorage.setItem('dmceu.ss15.view', state.view); } catch (e) {}
+    state.view = (view === 'table' || view === 'events') ? view : 'cards';
+    try { localStorage.setItem('dmceu.ss15.view', state.view === 'events' ? 'cards' : state.view); } catch (e) {}
     render();
 }
 window.setView = setView;
@@ -652,8 +669,11 @@ function listHeading(count) {
 
 function render() {
     syncControls();
-    const data = getFiltered();
     const container = $('#cards-container');
+    $('#controls').hidden = state.view === 'events';
+    const vt = document.querySelector('.view-toggle'); if (vt) vt.hidden = state.view === 'events';
+    if (state.view === 'events') { renderEvents(container); return; }
+    const data = getFiltered();
     $('#result-count').textContent = allData.length
         ? `แสดง ${data.length} จาก ${allData.length} คิว`
         : '';
@@ -759,6 +779,100 @@ function buildCardSections(data) {
     return html;
 }
 
+
+
+/* ─── หน้ากิจกรรม ─── */
+let eventsData = null;          // null = ยังไม่ได้โหลด
+
+/** ลิงก์แชร์ Google Drive → ลิงก์รูปที่แสดงในหน้าเว็บได้ */
+function imageUrl(raw) {
+    const u = String(raw || '').trim();
+    if (!u) return '';
+    const m = u.match(/drive\.google\.com\/(?:file\/d\/|open\?id=|uc\?(?:export=\w+&)?id=)([\w-]+)/);
+    if (m) return `https://lh3.googleusercontent.com/d/${m[1]}`;
+    return u;
+}
+
+function loadEventsSheet() {
+    const src = currentSource();
+    if (!src.id) return;
+    const el = document.createElement('script');
+    el.src = 'https://docs.google.com/spreadsheets/d/' + src.id +
+             '/gviz/tq?tqx=out:json;responseHandler:processEventsData' +
+             '&sheet=' + encodeURIComponent(EVENTS_SHEET_TAB) + '&headers=0' +
+             '&tq=' + encodeURIComponent('select A,B,C,D limit 50') + '&_=' + Date.now();
+    el.async = true;
+    el.onerror = () => { el.remove(); if (eventsData === null) { eventsData = []; if (state.view === 'events') render(); } };
+    el.addEventListener('load', () => el.remove());
+    document.head.appendChild(el);
+}
+
+function processEventsData(response) {
+    const list = [];
+    if (response && response.status !== 'error' && response.table) {
+        const cell = (row, i) => (row.c[i] && row.c[i].v !== null && row.c[i].v !== undefined) ? String(row.c[i].f || row.c[i].v).trim() : '';
+        (response.table.rows || []).forEach(row => {
+            if (!row || !row.c) return;
+            const title = cell(row, 0), image = imageUrl(cell(row, 1)), desc = cell(row, 2), link = cell(row, 3);
+            if (!/^https?:\/\//i.test(image) && !/^assets\//.test(image)) return;   // ไม่ใช่รูป (เช่นแท็บ "กิจกรรม" ยังไม่มี → Google ส่งแท็บแรกมาแทน)
+            if (/^(หัวข้อ|ชื่อ|title)$/i.test(title)) return;                          // ข้ามแถวหัวตาราง
+            list.push({ title, image, desc, link });
+        });
+    }
+    const changed = JSON.stringify(list) !== JSON.stringify(eventsData);
+    eventsData = list;
+    if (changed && state.view === 'events') render();
+}
+window.processEventsData = processEventsData;
+
+function renderEvents(container) {
+    $('#result-count').textContent = '';
+    const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
+    $('#listTitle').innerHTML = icon('event') + 'ตารางกิจกรรม';
+    $('#listSub').textContent = items.length ? `${items.length} รายการ · แตะรูปเพื่อขยาย` : '';
+    $('#listHead').hidden = false;
+
+    if (eventsData === null && !EVENTS_DEFAULT.length) {
+        container.innerHTML = `<div class="state">${icon('refresh')}<strong>กำลังโหลดกิจกรรม…</strong></div>`;
+        return;
+    }
+    if (!items.length) {
+        container.innerHTML = `<div class="state">${icon('event')}
+            <strong>ยังไม่มีตารางกิจกรรม</strong>
+            <p>ทีมงานสามารถเพิ่มรูปตารางกิจกรรมได้ในชีต แท็บ “${esc(EVENTS_SHEET_TAB)}”</p></div>`;
+        return;
+    }
+    container.innerHTML = `<div class="events-grid">${items.map((ev, i) => `
+        <article class="event-card">
+            <a class="event-img" href="${esc(ev.image)}" data-idx="${i}" onclick="return openImage(${i})">
+                <img src="${esc(ev.image)}" alt="${esc(ev.title || 'ตารางกิจกรรม')}" loading="lazy"
+                     onerror="this.closest('.event-card').classList.add('broken'); this.replaceWith(Object.assign(document.createElement('span'),{textContent:'โหลดรูปไม่ได้ · ตรวจสิทธิ์แชร์ของไฟล์'}))">
+                <span class="event-zoom">${icon('expand')} ขยาย</span>
+            </a>
+            ${(ev.title || ev.desc || ev.link) ? `<div class="event-body">
+                ${ev.title ? `<h3 class="event-title">${esc(ev.title)}</h3>` : ''}
+                ${ev.desc ? `<p class="event-desc">${esc(ev.desc)}</p>` : ''}
+                ${ev.link ? `<a class="event-link" href="${esc(ev.link)}" target="_blank" rel="noopener">${icon('link')} เปิดลิงก์เพิ่มเติม</a>` : ''}
+            </div>` : ''}
+        </article>`).join('')}</div>`;
+}
+
+const imgModal = $('#imgModal');
+function openImage(i) {
+    const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
+    const ev = items[i];
+    if (!ev) return true;
+    $('#imgFull').src = ev.image;
+    $('#imgFull').alt = ev.title || 'ตารางกิจกรรม';
+    $('#imgTitle').textContent = ev.title || 'ตารางกิจกรรม';
+    $('#imgOpen').href = ev.image;
+    if (typeof imgModal.showModal === 'function') { imgModal.showModal(); $('#imgBody').scrollTop = 0; return false; }
+    return true;   // เบราว์เซอร์เก่า: เปิดรูปในแท็บใหม่แทน
+}
+window.openImage = openImage;
+$('#imgClose').addEventListener('click', () => imgModal.close());
+imgModal.addEventListener('click', e => { if (e.target === imgModal || e.target === $('#imgBody')) imgModal.close(); });
+imgModal.addEventListener('close', () => { $('#imgFull').src = ''; });
 
 /* ─── มุมมองตาราง (ภาพรวมเหมือนชีต) ─── */
 const thaiDaysShort = ['อา.', 'จ.', 'อ.', 'พ.', 'พฤ.', 'ศ.', 'ส.'];
@@ -996,9 +1110,10 @@ $$('.vt-btn').forEach(btn => btn.addEventListener('click', () => setView(btn.dat
 $$('.bn-item').forEach(btn => {
     btn.addEventListener('click', () => {
         const nav = btn.dataset.nav;
-        if (nav === 'search') {
-            $('#controls').scrollIntoView({ block: 'start' });
-            setTimeout(() => $('#searchInput').focus(), 260);
+        if (nav === 'events') {
+            setView('events');
+            if (eventsData === null) loadEventsSheet();
+            scrollToList(true);
             return;
         }
         if (nav === 'table') { setView('table'); scrollToList(true); return; }
@@ -1013,8 +1128,8 @@ $$('.bn-item').forEach(btn => {
 });
 
 function scrollToList(force) {
-    const controls = $('#controls');
-    const y = controls.getBoundingClientRect().top + window.scrollY - stickyOffset() + 2;
+    const controls = $('#controls').hidden ? $('#listHead') : $('#controls');   // หน้ากิจกรรมไม่มีตัวกรอง
+    const y = controls.getBoundingClientRect().top + window.scrollY - stickyOffset() - ($('#controls').hidden ? 12 : -2);
     // กดแท็บ → กระโดดไปทันที: การเลื่อนแบบอนิเมชันทำให้แถบ sticky บน iOS สั่นระหว่างเลื่อน
     if (force) { window.scrollTo({ top: y, behavior: 'instant' }); return; }
     if (window.scrollY > y) window.scrollTo({ top: y, behavior: 'smooth' });
@@ -1311,8 +1426,10 @@ function switchSource(message) {
         '<div class="state">' + icon('refresh') + '<strong>กำลังโหลดข้อมูล…</strong></div>';
     toast(message);
     if (!loadCache()) renderStats(0, 0);
+    eventsData = null;
     loadData(true);
     loadConfigSheet();
+    loadEventsSheet();
 }
 
 $('#sourceBtn').addEventListener('click', openSourceModal);
@@ -1520,12 +1637,14 @@ setInterval(() => {
 setInterval(() => {
     if (document.visibilityState !== 'visible' || !navigator.onLine) return;
     loadConfigSheet();
+    loadEventsSheet();
 }, CONFIG_REFRESH_MS);
 
 /* ─── Boot ─── */
 loadCache();
 loadData();
 loadConfigSheet();
+loadEventsSheet();
 statsStart();
 
 /* ─── Light content guard (kept from the original build) ─── */
