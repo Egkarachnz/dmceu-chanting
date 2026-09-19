@@ -3,7 +3,7 @@
    Sheet data is JSONP from Google and is never cached here. */
 
 /* เวลาแก้ไฟล์ให้บัมพ์เลขนี้ และเลข ?v= ใน index.html ให้ตรงกัน */
-const ASSET_V = '20';
+const ASSET_V = '21';
 const VERSION = 'dmceu-ss15-v' + ASSET_V;
 const SHELL = [
     './',
@@ -44,15 +44,21 @@ self.addEventListener('fetch', event => {
 
     // Never intercept the spreadsheet feed or other API calls.
     if (url.hostname.indexOf('docs.google.com') > -1 || url.hostname.indexOf('geojs.io') > -1 ||
-        url.hostname.indexOf('supabase.co') > -1) return;
+        url.hostname.indexOf('supabase.co') > -1 || url.hostname.indexOf('jsdelivr.net') > -1) return;
+
+    // หน้าหลังบ้าน (admin.*) ไม่ผ่านแคช — ต้องออนไลน์อยู่แล้วถึงใช้งานได้
+    if (/\/admin\.(html|js|css|webmanifest)$/.test(url.pathname)) return;
 
     // Navigations: network first, fall back to the cached shell when offline.
     if (req.mode === 'navigate') {
         event.respondWith(
             fetch(req)
                 .then(res => {
-                    const copy = res.clone();
-                    caches.open(VERSION).then(c => c.put('index.html', copy));
+                    // เก็บเฉพาะหน้าแรกไว้ใช้ตอนออฟไลน์ (ไม่ให้หน้าอื่นมาทับ)
+                    if (/\/(index\.html)?$/.test(url.pathname)) {
+                        const copy = res.clone();
+                        caches.open(VERSION).then(c => c.put('index.html', copy));
+                    }
                     return res;
                 })
                 .catch(() => caches.match('index.html').then(r => r || caches.match('./')))

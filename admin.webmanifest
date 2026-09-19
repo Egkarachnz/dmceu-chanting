@@ -1,0 +1,19 @@
+{
+  "name": "หลังบ้าน DMCEU · ตารางสวดมนต์",
+  "short_name": "หลังบ้าน DMCEU",
+  "description": "ระบบหลังบ้านสำหรับทีมงาน อัปโหลดตารางกิจกรรม",
+  "lang": "th",
+  "dir": "ltr",
+  "id": "admin",
+  "start_url": "admin.html",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#141a33",
+  "theme_color": "#141a33",
+  "icons": [
+    { "src": "assets/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

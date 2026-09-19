@@ -854,6 +854,7 @@ img { display: block; max-width: 100%; }
 
 /* ─── Source settings modal ─── */
 .footer-link {
+    text-decoration: none;
     display: inline-flex; align-items: center; gap: 7px;
     margin-top: 4px; padding: 8px 14px;
     border-radius: var(--r-pill);

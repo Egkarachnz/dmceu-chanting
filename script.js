@@ -98,9 +98,9 @@ const SEASON_LABEL = 'ซีซั่นที่ 16';
 
 /* ────────────────────────────────────────────────────────────
    หน้า "กิจกรรม" — รูปโปสเตอร์ตารางกิจกรรม
-   แอดมินใส่ในชีตแท็บชื่อ "กิจกรรม" (คอลัมน์: A=หัวข้อ B=ลิงก์รูป C=รายละเอียด D=ลิงก์เพิ่มเติม)
-   ลิงก์รูปใช้ได้ทั้งลิงก์แชร์จาก Google Drive และลิงก์รูปตรง ๆ (.jpg/.png)
-   ถ้าในชีตยังไม่มี จะใช้รายการตั้งต้นข้างล่างนี้
+   ลำดับแหล่งข้อมูล: 1) หลังบ้าน admin.html (Supabase ตาราง events)
+                    2) ชีตแท็บ "กิจกรรม" (A=หัวข้อ B=ลิงก์รูป C=รายละเอียด D=ลิงก์เพิ่มเติม)
+                    3) รายการตั้งต้นข้างล่างนี้
    ──────────────────────────────────────────────────────────── */
 const EVENTS_SHEET_TAB = 'กิจกรรม';
 const EVENTS_DEFAULT = [
@@ -646,7 +646,7 @@ function syncControls() {
 function setView(view) {
     state.view = (view === 'table' || view === 'events') ? view : 'cards';
     try { localStorage.setItem('dmceu.ss15.view', state.view === 'events' ? 'cards' : state.view); } catch (e) {}
-    if (state.view === 'events' && eventsData === null) loadEventsSheet();
+    if (state.view === 'events' && eventsData === null) loadEvents();
     render();
 }
 window.setView = setView;
@@ -782,7 +782,39 @@ function buildCardSections(data) {
 
 
 /* ─── หน้ากิจกรรม ─── */
-let eventsData = null;          // null = ยังไม่ได้โหลด
+let eventsData = null;          // รายการที่ใช้แสดงจริง (null = ยังไม่ได้โหลด)
+let eventsDb = null;            // จากหลังบ้าน (Supabase)
+let eventsSheet = null;         // จากชีตแท็บ "กิจกรรม"
+
+/** เลือกแหล่งที่ใช้แสดง: หลังบ้านก่อน ถ้าว่างค่อยใช้ชีต */
+function applyEvents() {
+    const next = (eventsDb && eventsDb.length) ? eventsDb : eventsSheet;
+    const changed = JSON.stringify(next) !== JSON.stringify(eventsData);
+    eventsData = next;
+    if (changed && state.view === 'events') render();
+}
+
+function loadEvents() { loadEventsDb(); loadEventsSheet(); }
+
+async function loadEventsDb() {
+    if (!STATS_CONFIG.url) { if (eventsDb === null) { eventsDb = []; applyEvents(); } return; }
+    try {
+        const res = await fetch(`${STATS_CONFIG.url}/rest/v1/events?select=title,description,link,image_path` +
+                                `&visible=eq.true&order=sort.asc,created_at.desc&limit=50`,
+                                { headers: { apikey: STATS_CONFIG.key }, cache: 'no-store' });
+        if (!res.ok) throw new Error('events ' + res.status);
+        const rows = await res.json();
+        eventsDb = rows.map(r => ({
+            title: r.title || '',
+            image: `${STATS_CONFIG.url}/storage/v1/object/public/events/${r.image_path}`,
+            desc: r.description || '',
+            link: r.link || ''
+        }));
+    } catch (e) {
+        if (eventsDb === null) eventsDb = [];
+    }
+    applyEvents();
+}
 
 /** ลิงก์แชร์ Google Drive → ลิงก์รูปที่แสดงในหน้าเว็บได้ */
 function imageUrl(raw) {
@@ -802,7 +834,7 @@ function loadEventsSheet() {
              '&sheet=' + encodeURIComponent(EVENTS_SHEET_TAB) + '&headers=0' +
              '&tq=' + encodeURIComponent('select A,B,C,D limit 50') + '&_=' + Date.now();
     el.async = true;
-    el.onerror = () => { el.remove(); if (eventsData === null) { eventsData = []; if (state.view === 'events') render(); } };
+    el.onerror = () => { el.remove(); if (eventsSheet === null) { eventsSheet = []; applyEvents(); } };
     el.addEventListener('load', () => el.remove());
     document.head.appendChild(el);
 }
@@ -819,9 +851,8 @@ function processEventsData(response) {
             list.push({ title, image, desc, link });
         });
     }
-    const changed = JSON.stringify(list) !== JSON.stringify(eventsData);
-    eventsData = list;
-    if (changed && state.view === 'events') render();
+    eventsSheet = list;
+    applyEvents();
 }
 window.processEventsData = processEventsData;
 
@@ -839,7 +870,7 @@ function renderEvents(container) {
     if (!items.length) {
         container.innerHTML = `<div class="state">${icon('event')}
             <strong>ยังไม่มีตารางกิจกรรม</strong>
-            <p>ทีมงานสามารถเพิ่มรูปตารางกิจกรรมได้ในชีต แท็บ “${esc(EVENTS_SHEET_TAB)}”</p></div>`;
+            <p>ทีมงานเพิ่มรูปได้ที่หน้าหลังบ้าน (admin.html) หรือชีตแท็บ “${esc(EVENTS_SHEET_TAB)}”</p></div>`;
         return;
     }
     container.innerHTML = `<div class="events-grid">${items.map((ev, i) => `
@@ -1157,7 +1188,7 @@ $$('.bn-item').forEach(btn => {
         const nav = btn.dataset.nav;
         if (nav === 'events') {
             setView('events');
-            if (eventsData === null) loadEventsSheet();
+            if (eventsData === null) loadEvents();
             scrollToList(true);
             return;
         }
@@ -1471,10 +1502,10 @@ function switchSource(message) {
         '<div class="state">' + icon('refresh') + '<strong>กำลังโหลดข้อมูล…</strong></div>';
     toast(message);
     if (!loadCache()) renderStats(0, 0);
-    eventsData = null;
+    eventsData = eventsSheet = null;
     loadData(true);
     loadConfigSheet();
-    loadEventsSheet();
+    loadEvents();
 }
 
 $('#sourceBtn').addEventListener('click', openSourceModal);
@@ -1672,12 +1703,13 @@ window.addEventListener('pagehide', statsLeave);
 
 /* ─── อัปเดตอัตโนมัติขณะเปิดหน้าอยู่ ───
    · ตารางคิว: เช็คชีตทุก 30 วินาที แบบเงียบ วาดหน้าใหม่เฉพาะตอนข้อมูลเปลี่ยนจริง
-   · แท็บ config (เวลา Live ฯลฯ): ทุก 5 นาที */
+   · แท็บ config (เวลา Live ฯลฯ) และชีตกิจกรรม: ทุก 5 นาที */
 const AUTO_REFRESH_MS = 30 * 1000;
 const CONFIG_REFRESH_MS = 5 * 60 * 1000;
 setInterval(() => {
     if (document.visibilityState !== 'visible' || !navigator.onLine || loading) return;
     loadData(false, true);
+    loadEventsDb();     // รูปกิจกรรมจากหลังบ้าน — เบา เช็คพร้อมกันทุก 30 วิ
 }, AUTO_REFRESH_MS);
 setInterval(() => {
     if (document.visibilityState !== 'visible' || !navigator.onLine) return;
@@ -1689,7 +1721,7 @@ setInterval(() => {
 loadCache();
 loadData();
 loadConfigSheet();
-loadEventsSheet();
+loadEvents();
 statsStart();
 
 /* ─── Light content guard (kept from the original build) ─── */

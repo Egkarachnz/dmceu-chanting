@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="th" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>หลังบ้าน · DMCEU สวดมนต์</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="description" content="ระบบหลังบ้านสำหรับทีมงาน · อัปโหลดตารางกิจกรรม">
+
+<!-- PWA (แยกจากแอปหลัก เพิ่มไว้หน้าจอโฮมได้เป็นอีกไอคอน) -->
+<link rel="manifest" href="admin.webmanifest">
+<meta name="theme-color" content="#141a33" id="meta-theme-color">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="หลังบ้าน DMCEU">
+<link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+<link rel="icon" href="assets/favicon-64.png" sizes="64x64" type="image/png">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
+<link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css?v=21">
+<link rel="stylesheet" href="admin.css?v=21">
+
+<script>
+(function () {
+    var saved = localStorage.getItem('theme') || 'auto';
+    var sysDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    var mode = saved === 'auto' ? (sysDark ? 'dark' : 'light') : saved;
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.setAttribute('data-theme-pref', saved);
+})();
+</script>
+</head>
+<body class="admin-page">
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+    <defs>
+        <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+        <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.6-6.4"/><path d="M21 3v6h-6"/></symbol>
+        <symbol id="i-alert" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 8v5M12 16.5v.01"/></symbol>
+        <symbol id="i-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
+        <symbol id="i-event" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 10h18"/><path d="m10.5 14 1.5 1.5 3-3"/></symbol>
+        <symbol id="i-link" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.5 1.5"/><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7L12 19"/></symbol>
+        <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></symbol>
+        <symbol id="i-eye-off" viewBox="0 0 24 24"><path d="M3 3l18 18"/><path d="M10.6 10.6a3 3 0 0 0 4.2 4.2"/><path d="M9.9 5.1A10.5 10.5 0 0 1 12 5c6.5 0 10 7 10 7a17 17 0 0 1-3.2 4.1M6.6 6.6C3.7 8.5 2 12 2 12s3.5 7 10 7c1.6 0 3-.4 4.3-1"/></symbol>
+        <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></symbol>
+        <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+        <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="10" r="2"/><path d="m21 16-5-5-8 8"/></symbol>
+        <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></symbol>
+        <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></symbol>
+        <symbol id="i-up" viewBox="0 0 24 24"><path d="m18 15-6-6-6 6"/></symbol>
+        <symbol id="i-down" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+        <symbol id="i-logout" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5M21 12H9"/></symbol>
+        <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14 21 3"/></symbol>
+        <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
+        <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+        <symbol id="i-cards" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18"/></symbol>
+    </defs>
+</svg>
+
+<header class="appbar" id="appbar">
+    <div class="appbar-inner">
+        <a class="brand" href="./" title="ไปหน้าเว็บหลัก">
+            <div class="brand-mark"><img src="assets/logo-mark.png" alt="DMCEU" width="40" height="40"></div>
+            <div class="brand-text">
+                <strong>หลังบ้าน DMCEU</strong>
+                <span>ตารางวัดนำสวดมนต์ · ทีมงาน</span>
+            </div>
+        </a>
+        <div class="appbar-actions">
+            <button class="icon-btn" id="themeBtn" type="button" title="สลับธีม" aria-label="สลับธีม">
+                <svg class="ic ic-sun"><use href="#i-sun"/></svg>
+                <svg class="ic ic-moon"><use href="#i-moon"/></svg>
+            </button>
+            <button class="icon-btn" id="logoutBtn" type="button" title="ออกจากระบบ" aria-label="ออกจากระบบ" hidden>
+                <svg class="ic"><use href="#i-logout"/></svg>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main class="wrap admin-main">
+
+    <!-- ─── ล็อกอิน ─── -->
+    <section class="auth-card" id="authView">
+        <div class="auth-icon"><svg class="ic"><use href="#i-lock"/></svg></div>
+        <h1 class="auth-title">เข้าสู่ระบบทีมงาน</h1>
+        <p class="auth-sub">เฉพาะอีเมลที่ได้รับสิทธิ์แอดมินเท่านั้น</p>
+        <form id="loginForm" class="auth-form" autocomplete="on">
+            <label class="field">
+                <span class="field-label">อีเมล</span>
+                <input class="field-input" id="loginEmail" type="email" name="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required placeholder="you@example.com">
+            </label>
+            <label class="field">
+                <span class="field-label">รหัสผ่าน</span>
+                <input class="field-input" id="loginPass" type="password" name="password" autocomplete="current-password" required placeholder="••••••••">
+            </label>
+            <p class="field-error" id="loginError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+            <button class="btn-primary" id="loginBtn" type="submit">เข้าสู่ระบบ</button>
+        </form>
+        <p class="auth-note">ลืมรหัสผ่าน? รีเซ็ตได้ใน Supabase → Authentication → Users</p>
+    </section>
+
+    <!-- ─── หน้าหลักหลังบ้าน ─── -->
+    <section id="appView" hidden>
+        <div class="admin-head">
+            <div class="admin-head-text">
+                <h1 class="admin-title"><svg class="ic"><use href="#i-event"/></svg> ตารางกิจกรรม</h1>
+                <p class="admin-sub" id="adminSub">กำลังโหลด…</p>
+            </div>
+            <a class="btn-ghost btn-sm" href="./" target="_blank" rel="noopener">
+                <svg class="ic"><use href="#i-external"/></svg> ดูหน้าเว็บ
+            </a>
+        </div>
+
+        <button class="add-btn" id="addBtn" type="button">
+            <span class="add-btn-ic"><svg class="ic"><use href="#i-plus"/></svg></span>
+            <span class="add-btn-text">
+                <strong>เพิ่มรูปตารางกิจกรรม</strong>
+                <span>เลือกรูปจากเครื่อง · ย่อขนาดให้อัตโนมัติ</span>
+            </span>
+        </button>
+
+        <div class="admin-list" id="eventList"></div>
+
+        <p class="admin-foot">
+            รูปที่อัปโหลดจะขึ้นในหน้า “กิจกรรม” ของแอปภายในประมาณ 30 วินาที · ผู้ใช้ที่เปิดแอปค้างไว้ก็จะเห็นเอง
+        </p>
+    </section>
+</main>
+
+<!-- ─── ฟอร์มเพิ่ม/แก้ไข ─── -->
+<dialog class="sheet-modal" id="editModal">
+    <form class="modal-card edit-card" id="editForm" method="dialog">
+        <div class="modal-head">
+            <h2 id="editTitle">เพิ่มรูปตารางกิจกรรม</h2>
+            <button class="icon-btn" type="button" id="editClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+        </div>
+
+        <input type="file" id="fileInput" accept="image/*" hidden>
+        <div class="drop" id="drop" tabindex="0" role="button" aria-label="เลือกรูป">
+            <div class="drop-empty" id="dropEmpty">
+                <svg class="ic"><use href="#i-image"/></svg>
+                <strong>แตะเพื่อเลือกรูป</strong>
+                <span>หรือลากไฟล์มาวางที่นี่ · JPG / PNG / HEIC</span>
+            </div>
+            <div class="drop-preview" id="dropPreview" hidden>
+                <img id="previewImg" alt="">
+                <span class="drop-meta" id="previewMeta"></span>
+                <span class="drop-change">แตะเพื่อเปลี่ยนรูป</span>
+            </div>
+        </div>
+
+        <label class="field">
+            <span class="field-label">หัวข้อ</span>
+            <input class="field-input" id="fTitle" type="text" maxlength="120" placeholder="เช่น กำหนดการกิจกรรมบ้านกัลยาณมิตร SS16">
+        </label>
+        <label class="field">
+            <span class="field-label">รายละเอียด (ไม่บังคับ)</span>
+            <textarea class="field-input field-textarea" id="fDesc" rows="3" maxlength="600" placeholder="ข้อความสั้น ๆ ใต้รูป"></textarea>
+        </label>
+        <label class="field">
+            <span class="field-label">ลิงก์เพิ่มเติม (ไม่บังคับ)</span>
+            <input class="field-input" id="fLink" type="url" inputmode="url" placeholder="https://…">
+        </label>
+        <label class="switch-row">
+            <span class="switch-text"><strong>แสดงบนหน้าเว็บ</strong><span>ปิดไว้ถ้ายังไม่พร้อมเผยแพร่</span></span>
+            <input type="checkbox" id="fVisible" class="switch" checked>
+        </label>
+
+        <p class="field-error" id="editError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+
+        <div class="upload-progress" id="uploadProgress" hidden>
+            <div class="upload-bar"><div class="upload-fill" id="uploadFill"></div></div>
+            <span id="uploadText">กำลังอัปโหลด…</span>
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" id="editCancel">ยกเลิก</button>
+            <button class="btn-primary" type="submit" id="editSave"><svg class="ic"><use href="#i-check"/></svg> บันทึก</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- ─── ยืนยันลบ ─── -->
+<dialog class="sheet-modal" id="confirmModal">
+    <div class="modal-card">
+        <div class="modal-head"><h2>ลบรายการนี้?</h2></div>
+        <p class="confirm-text" id="confirmText">รูปจะถูกลบออกจากหน้าเว็บทันที และกู้คืนไม่ได้</p>
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" id="confirmNo">ยกเลิก</button>
+            <button class="btn-primary btn-danger" type="button" id="confirmYes"><svg class="ic"><use href="#i-trash"/></svg> ลบเลย</button>
+        </div>
+    </div>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="admin.js?v=21"></script>
+</body>
+</html>
