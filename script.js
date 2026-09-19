@@ -646,6 +646,7 @@ function syncControls() {
 function setView(view) {
     state.view = (view === 'table' || view === 'events') ? view : 'cards';
     try { localStorage.setItem('dmceu.ss15.view', state.view === 'events' ? 'cards' : state.view); } catch (e) {}
+    if (state.view === 'events' && eventsData === null) loadEventsSheet();
     render();
 }
 window.setView = setView;
@@ -671,7 +672,6 @@ function render() {
     syncControls();
     const container = $('#cards-container');
     $('#controls').hidden = state.view === 'events';
-    const vt = document.querySelector('.view-toggle'); if (vt) vt.hidden = state.view === 'events';
     if (state.view === 'events') { renderEvents(container); return; }
     const data = getFiltered();
     $('#result-count').textContent = allData.length
