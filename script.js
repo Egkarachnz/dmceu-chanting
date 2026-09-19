@@ -885,8 +885,8 @@ function renderEvents(container) {
                 ${ev.desc ? `<p class="event-desc">${esc(ev.desc)}</p>` : ''}
                 <div class="event-actions">
                     <button class="event-dl" type="button" onclick="downloadImage(${i}, this)">${icon('download')} ดาวน์โหลดรูป</button>
-                    <button class="event-share fb" type="button" onclick="shareEvent(${i}, 'facebook')" title="แชร์ไป Facebook">${icon('facebook')} แชร์</button>
-                    <button class="event-share line" type="button" onclick="shareEvent(${i}, 'line')" title="แชร์ไป LINE">${icon('line')} แชร์</button>
+                    <button class="event-share fb" type="button" onclick="shareEvent(${i}, 'facebook', this)" title="แชร์รูปไป Facebook">${icon('facebook')} แชร์รูป</button>
+                    <button class="event-share line" type="button" onclick="shareEvent(${i}, 'line', this)" title="แชร์รูปไป LINE">${icon('line')} แชร์รูป</button>
                     ${ev.link ? `<a class="event-link" href="${esc(ev.link)}" target="_blank" rel="noopener">${icon('link')} เปิดลิงก์เพิ่มเติม</a>` : ''}
                 </div>
             </div>
@@ -933,7 +933,8 @@ async function downloadImage(i, btn) {
 window.downloadImage = downloadImage;
 
 /* ─── แชร์ไป Facebook / LINE ───
-   แชร์เป็นลิงก์หน้าเว็บ (ต่อท้าย #events ให้เปิดมาที่หน้ากิจกรรมเลย) เพราะ Facebook/LINE รับเป็นลิงก์เท่านั้น */
+   · รูปกิจกรรม: มือถือส่ง "ไฟล์รูป" ผ่านแผ่นแชร์ของเครื่อง (เลือก Facebook/LINE ได้) · คอมแชร์ลิงก์รูปโดยตรง
+   · ท้ายหน้า: แชร์ลิงก์แอป */
 const APP_TITLE = 'ตารางวัดนำสวดมนต์ · บ้านกัลยาณมิตรทวีปยุโรป SS16';
 function appUrl(hash) {
     return location.origin + location.pathname.replace(/index\.html$/, '') + (hash ? '#' + hash : '');
@@ -953,11 +954,36 @@ function openShare(network, url, text) {
     else window.open(target, 'share', 'noopener,width=640,height=560,left=' + Math.max(0, (screen.width - 640) / 2) + ',top=' + Math.max(0, (screen.height - 560) / 2));
 }
 function shareApp(network) { openShare(network, appUrl(''), APP_TITLE); }
-function shareEvent(i, network) {
+const NET_LABEL = { facebook: 'Facebook', line: 'LINE' };
+async function shareEvent(i, network, btn) {
     const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
     const ev = items[i];
-    const text = ev && ev.title ? `${ev.title} · ${APP_TITLE}` : APP_TITLE;
-    openShare(network, appUrl('events'), text);
+    if (!ev) return;
+    const title = ev.title || 'ตารางกิจกรรม';
+    const imageAbs = new URL(ev.image, location.href).href;
+
+    // มือถือ: ส่งเป็นไฟล์รูปจริง ๆ ผ่านแผ่นแชร์ → ผู้ใช้เลือก Facebook / LINE ในนั้น
+    if (isTouch && navigator.canShare) {
+        if (btn) btn.classList.add('busy');
+        try {
+            const res = await fetch(ev.image, { mode: 'cors' });
+            if (!res.ok) throw new Error('fetch ' + res.status);
+            const blob = await res.blob();
+            const file = new File([blob], fileNameFor(ev), { type: blob.type || 'image/jpeg' });
+            if (navigator.canShare({ files: [file] })) {
+                toast(`เลือก ${NET_LABEL[network] || 'แอป'} ในแผ่นแชร์`);
+                try { await navigator.share({ files: [file], title }); }
+                catch (e) { if (e && e.name !== 'AbortError') throw e; }
+                return;
+            }
+        } catch (e) {
+            /* ส่งไฟล์ไม่ได้ (เช่นรูปข้ามเว็บ) → แชร์เป็นลิงก์รูปแทน */
+        } finally {
+            if (btn) btn.classList.remove('busy');
+        }
+    }
+    // คอม / เบราว์เซอร์ที่ส่งไฟล์ไม่ได้: แชร์ลิงก์รูปโดยตรง (Facebook/LINE จะแสดงเป็นรูปให้)
+    openShare(network, imageAbs, title);
 }
 window.shareApp = shareApp;
 window.shareEvent = shareEvent;
@@ -966,8 +992,8 @@ if (navigator.share) $('#shareMore').hidden = false;
 const imgModal = $('#imgModal');
 let imgModalIndex = 0;
 $('#imgDownload').addEventListener('click', () => downloadImage(imgModalIndex, $('#imgDownload')));
-$('#imgShareFb').addEventListener('click', () => shareEvent(imgModalIndex, 'facebook'));
-$('#imgShareLine').addEventListener('click', () => shareEvent(imgModalIndex, 'line'));
+$('#imgShareFb').addEventListener('click', () => shareEvent(imgModalIndex, 'facebook', $('#imgShareFb')));
+$('#imgShareLine').addEventListener('click', () => shareEvent(imgModalIndex, 'line', $('#imgShareLine')));
 function openImage(i) {
     imgModalIndex = i;
     const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;

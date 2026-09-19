@@ -757,7 +757,7 @@ img { display: block; max-width: 100%; }
 .event-share .ic { width: 15px; height: 15px; }
 [data-theme="dark"] .event-dl { background: var(--gold); color: #16110a; }
 .event-link:active, .event-dl:active { transform: scale(.96); }
-.event-dl.busy { opacity: .6; pointer-events: none; }
+.event-dl.busy, .event-share.busy, .icon-btn.busy { opacity: .6; pointer-events: none; }
 .event-link .ic, .event-dl .ic { width: 14px; height: 14px; }
 .event-card.broken .event-img { aspect-ratio: 4/5; display: grid; place-items: center; color: var(--text-mute); font-size: 13px; }
 
