@@ -20,7 +20,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=18">
+<link rel="stylesheet" href="styles.css?v=19">
 
 <script>
 // Theme boot (before paint) — light | dark | auto
@@ -227,6 +227,9 @@
 <dialog class="img-modal" id="imgModal">
     <div class="img-modal-bar">
         <span class="img-modal-title" id="imgTitle"></span>
+        <button class="icon-btn ghost light" id="imgDownload" type="button" title="ดาวน์โหลด / บันทึกรูป" aria-label="ดาวน์โหลดรูป">
+            <svg class="ic"><use href="#i-download"/></svg>
+        </button>
         <a class="icon-btn ghost light" id="imgOpen" href="#" target="_blank" rel="noopener" title="เปิดรูปต้นฉบับ (ซูมได้)" aria-label="เปิดรูปต้นฉบับ">
             <svg class="ic"><use href="#i-expand"/></svg>
         </a>
@@ -418,6 +421,6 @@
 <!-- ─── TOAST ─── -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="script.js?v=18"></script>
+<script src="script.js?v=19"></script>
 </body>
 </html>

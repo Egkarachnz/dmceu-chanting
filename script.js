@@ -849,16 +849,61 @@ function renderEvents(container) {
                      onerror="this.closest('.event-card').classList.add('broken'); this.replaceWith(Object.assign(document.createElement('span'),{textContent:'โหลดรูปไม่ได้ · ตรวจสิทธิ์แชร์ของไฟล์'}))">
                 <span class="event-zoom">${icon('expand')} ขยาย</span>
             </a>
-            ${(ev.title || ev.desc || ev.link) ? `<div class="event-body">
+            <div class="event-body">
                 ${ev.title ? `<h3 class="event-title">${esc(ev.title)}</h3>` : ''}
                 ${ev.desc ? `<p class="event-desc">${esc(ev.desc)}</p>` : ''}
-                ${ev.link ? `<a class="event-link" href="${esc(ev.link)}" target="_blank" rel="noopener">${icon('link')} เปิดลิงก์เพิ่มเติม</a>` : ''}
-            </div>` : ''}
+                <div class="event-actions">
+                    <button class="event-dl" type="button" onclick="downloadImage(${i}, this)">${icon('download')} ดาวน์โหลดรูป</button>
+                    ${ev.link ? `<a class="event-link" href="${esc(ev.link)}" target="_blank" rel="noopener">${icon('link')} เปิดลิงก์เพิ่มเติม</a>` : ''}
+                </div>
+            </div>
         </article>`).join('')}</div>`;
 }
 
+/** ดาวน์โหลด/บันทึกรูป — มือถือใช้แผ่นแชร์ (มี "บันทึกรูปภาพ"), คอมดาวน์โหลดเป็นไฟล์ */
+const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+function fileNameFor(ev) {
+    const base = (ev.title || 'ตารางกิจกรรม').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 60);
+    const ext = (ev.image.match(/\.(png|jpe?g|webp|gif)(\?|$)/i) || [, 'jpg'])[1].toLowerCase();
+    return `${base}.${ext === 'jpeg' ? 'jpg' : ext}`;
+}
+async function downloadImage(i, btn) {
+    const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
+    const ev = items[i];
+    if (!ev) return;
+    if (btn) btn.classList.add('busy');
+    try {
+        const res = await fetch(ev.image, { mode: 'cors' });
+        if (!res.ok) throw new Error('fetch ' + res.status);
+        const blob = await res.blob();
+        const name = fileNameFor(ev);
+        const file = new File([blob], name, { type: blob.type || 'image/jpeg' });
+
+        if (isTouch && navigator.canShare && navigator.canShare({ files: [file] })) {
+            try { await navigator.share({ files: [file], title: ev.title || 'ตารางกิจกรรม' }); }
+            catch (e) { if (e && e.name !== 'AbortError') throw e; }   // ผู้ใช้กดยกเลิก = ไม่ใช่ error
+        } else {
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+            setTimeout(() => URL.revokeObjectURL(url), 4000);
+            toast('กำลังดาวน์โหลดรูป…');
+        }
+    } catch (e) {
+        // ดึงไฟล์ข้ามเว็บไม่ได้ (เช่นรูปจาก Drive) → เปิดรูปในแท็บใหม่ให้บันทึกเอง
+        window.open(ev.image, '_blank', 'noopener');
+        toast('เปิดรูปแล้ว · กดค้างที่รูปเพื่อบันทึก');
+    } finally {
+        if (btn) btn.classList.remove('busy');
+    }
+}
+window.downloadImage = downloadImage;
+
 const imgModal = $('#imgModal');
+let imgModalIndex = 0;
+$('#imgDownload').addEventListener('click', () => downloadImage(imgModalIndex, $('#imgDownload')));
 function openImage(i) {
+    imgModalIndex = i;
     const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
     const ev = items[i];
     if (!ev) return true;

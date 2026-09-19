@@ -741,12 +741,19 @@ img { display: block; max-width: 100%; }
 .event-body { padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 6px; }
 .event-title { font-size: 16px; font-weight: 600; line-height: 1.3; letter-spacing: -.01em; }
 .event-desc { font-size: 13.5px; color: var(--text-sec); line-height: 1.55; white-space: pre-line; }
-.event-link {
-    display: inline-flex; align-items: center; gap: 7px; align-self: flex-start;
-    margin-top: 6px; padding: 8px 14px; border-radius: var(--r-pill);
-    background: var(--blue-soft); color: var(--blue); font-size: 13px; text-decoration: none;
+.event-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.event-link, .event-dl {
+    display: inline-flex; align-items: center; gap: 7px;
+    min-height: 38px; padding: 0 15px; border-radius: var(--r-pill);
+    font-size: 13px; font-weight: 400; text-decoration: none;
+    transition: transform .15s var(--ease), filter .2s;
 }
-.event-link .ic { width: 14px; height: 14px; }
+.event-link { background: var(--blue-soft); color: var(--blue); }
+.event-dl { background: var(--navy); color: #fff; }
+[data-theme="dark"] .event-dl { background: var(--gold); color: #16110a; }
+.event-link:active, .event-dl:active { transform: scale(.96); }
+.event-dl.busy { opacity: .6; pointer-events: none; }
+.event-link .ic, .event-dl .ic { width: 14px; height: 14px; }
 .event-card.broken .event-img { aspect-ratio: 4/5; display: grid; place-items: center; color: var(--text-mute); font-size: 13px; }
 
 /* ── lightbox ── */
