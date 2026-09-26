@@ -106,7 +106,7 @@ const EVENTS_SHEET_TAB = 'กิจกรรม';
 const EVENTS_DEFAULT = [
     {
         title: 'กำหนดการกิจกรรมบ้านกัลยาณมิตร',
-        image: 'assets/events/schedule-ss16.jpg',
+        images: ['assets/events/schedule-ss16.jpg'],
         desc: 'สามัคคีธรรมสวดมนต์ทวีปยุโรป SS16 · ทุกครั้งเริ่ม 18:30 น. (เวลายุโรปกลาง)',
         link: ''
     }
@@ -799,17 +799,18 @@ function loadEvents() { loadEventsDb(); loadEventsSheet(); }
 async function loadEventsDb() {
     if (!STATS_CONFIG.url) { if (eventsDb === null) { eventsDb = []; applyEvents(); } return; }
     try {
-        const res = await fetch(`${STATS_CONFIG.url}/rest/v1/events?select=title,description,link,image_path` +
+        const res = await fetch(`${STATS_CONFIG.url}/rest/v1/events?select=title,description,link,images,image_path` +
                                 `&visible=eq.true&order=sort.asc,created_at.desc&limit=50`,
                                 { headers: { apikey: STATS_CONFIG.key }, cache: 'no-store' });
         if (!res.ok) throw new Error('events ' + res.status);
         const rows = await res.json();
-        eventsDb = rows.map(r => ({
-            title: r.title || '',
-            image: `${STATS_CONFIG.url}/storage/v1/object/public/events/${r.image_path}`,
-            desc: r.description || '',
-            link: r.link || ''
-        }));
+        const fileUrl = path => `${STATS_CONFIG.url}/storage/v1/object/public/events/${path}`;
+        eventsDb = rows.map(r => {
+            const list = Array.isArray(r.images) ? r.images : [];
+            const images = list.map(im => fileUrl(im && im.path)).filter(u => u && !u.endsWith('/'));
+            if (!images.length && r.image_path) images.push(fileUrl(r.image_path));   // แถวเก่าก่อนมีหลายรูป
+            return { title: r.title || '', images, desc: r.description || '', link: r.link || '' };
+        }).filter(ev => ev.images.length);
     } catch (e) {
         if (eventsDb === null) eventsDb = [];
     }
@@ -848,7 +849,7 @@ function processEventsData(response) {
             const title = cell(row, 0), image = imageUrl(cell(row, 1)), desc = cell(row, 2), link = cell(row, 3);
             if (!/^https?:\/\//i.test(image) && !/^assets\//.test(image)) return;   // ไม่ใช่รูป (เช่นแท็บ "กิจกรรม" ยังไม่มี → Google ส่งแท็บแรกมาแทน)
             if (/^(หัวข้อ|ชื่อ|title)$/i.test(title)) return;                          // ข้ามแถวหัวตาราง
-            list.push({ title, image, desc, link });
+            list.push({ title, images: [image], desc, link });
         });
     }
     eventsSheet = list;
@@ -856,71 +857,112 @@ function processEventsData(response) {
 }
 window.processEventsData = processEventsData;
 
+/* รายการรูปทั้งหมดแบบแบน (ใช้อ้างอิงตอนเปิดดู/ดาวน์โหลด) — สร้างใหม่ทุกครั้งที่วาดหน้ากิจกรรม
+   แต่ละรายการ: { url, title, post, idx, total, first, last } */
+let gallery = [];
+
+function buildGallery(items) {
+    gallery = [];
+    items.forEach((ev, post) => {
+        const imgs = ev.images || [];
+        const first = gallery.length;
+        imgs.forEach((url, idx) => gallery.push({
+            url, title: ev.title || 'ตารางกิจกรรม', post, idx,
+            total: imgs.length, first, last: first + imgs.length - 1
+        }));
+    });
+    return gallery;
+}
+
 function renderEvents(container) {
     $('#result-count').textContent = '';
     const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
     $('#listTitle').innerHTML = icon('event') + 'ตารางกิจกรรม';
-    $('#listSub').textContent = items.length ? `${items.length} รายการ · แตะรูปเพื่อขยาย` : '';
     $('#listHead').hidden = false;
 
     if (eventsData === null && !EVENTS_DEFAULT.length) {
+        $('#listSub').textContent = '';
         container.innerHTML = `<div class="state">${icon('refresh')}<strong>กำลังโหลดกิจกรรม…</strong></div>`;
         return;
     }
     if (!items.length) {
+        $('#listSub').textContent = '';
         container.innerHTML = `<div class="state">${icon('event')}
             <strong>ยังไม่มีตารางกิจกรรม</strong>
             <p>ทีมงานเพิ่มรูปได้ที่หน้าหลังบ้าน (admin.html) หรือชีตแท็บ “${esc(EVENTS_SHEET_TAB)}”</p></div>`;
         return;
     }
+
+    buildGallery(items);
+    $('#listSub').textContent = `${items.length} รายการ · ${gallery.length} รูป · แตะรูปเพื่อขยาย`;
     prefetchEventFiles();
-    container.innerHTML = `<div class="events-grid">${items.map((ev, i) => `
-        <article class="event-card">
-            <a class="event-img" href="${esc(ev.image)}" data-idx="${i}" onclick="return openImage(${i})">
-                <img src="${esc(ev.image)}" alt="${esc(ev.title || 'ตารางกิจกรรม')}" loading="lazy"
-                     onerror="this.closest('.event-card').classList.add('broken'); this.replaceWith(Object.assign(document.createElement('span'),{textContent:'โหลดรูปไม่ได้ · ตรวจสิทธิ์แชร์ของไฟล์'}))">
+
+    const brokenFix = "this.closest('.event-img').classList.add('broken'); " +
+        "this.replaceWith(Object.assign(document.createElement('span'),{textContent:'โหลดรูปไม่ได้'}))";
+
+    container.innerHTML = `<div class="events-grid">${items.map((ev, post) => {
+        const imgs = ev.images || [];
+        const g0 = gallery.find(g => g.post === post);
+        const base = g0 ? g0.first : 0;
+        const cover = `
+            <a class="event-img" href="${esc(imgs[0])}" onclick="return openImage(${base})">
+                <img src="${esc(imgs[0])}" alt="${esc(ev.title || 'ตารางกิจกรรม')}" loading="lazy" onerror="${brokenFix}">
                 <span class="event-zoom">${icon('expand')} ขยาย</span>
-            </a>
+                ${imgs.length > 1 ? `<span class="event-count">${icon('cards')} ${imgs.length} รูป</span>` : ''}
+            </a>`;
+        const strip = imgs.length > 1 ? `
+            <div class="event-strip">${imgs.slice(1).map((url, k) => `
+                <a class="event-thumb" href="${esc(url)}" onclick="return openImage(${base + k + 1})">
+                    <img src="${esc(url)}" alt="" loading="lazy" onerror="${brokenFix}">
+                </a>`).join('')}</div>` : '';
+        return `
+        <article class="event-card">
+            ${cover}
+            ${strip}
             <div class="event-body">
                 ${ev.title ? `<h3 class="event-title">${esc(ev.title)}</h3>` : ''}
                 ${ev.desc ? `<p class="event-desc">${esc(ev.desc)}</p>` : ''}
                 <div class="event-actions">
-                    <button class="event-dl" type="button" onclick="downloadImage(${i}, this)">${icon('download')} ดาวน์โหลดรูป</button>
+                    ${imgs.length > 1
+                        ? `<button class="event-dl" type="button" onclick="return openImage(${base})">${icon('expand')} ดูรูปทั้งหมด (${imgs.length})</button>`
+                        : `<button class="event-dl" type="button" onclick="downloadImage(${base}, this)">${icon('download')} ดาวน์โหลดรูป</button>`}
                     ${ev.link ? `<a class="event-link" href="${esc(ev.link)}" target="_blank" rel="noopener">${icon('link')} เปิดลิงก์เพิ่มเติม</a>` : ''}
                 </div>
             </div>
-        </article>`).join('')}</div>`;
+        </article>`;
+    }).join('')}</div>`;
 }
 
 /** ดาวน์โหลด/บันทึกรูป — มือถือใช้แผ่นแชร์ (มี "บันทึกรูปภาพ"), คอมดาวน์โหลดเป็นไฟล์ */
 const isTouch = window.matchMedia('(hover: none) and (pointer: coarse)').matches;
-function fileNameFor(ev) {
-    const base = (ev.title || 'ตารางกิจกรรม').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 60);
-    const ext = (ev.image.match(/\.(png|jpe?g|webp|gif)(\?|$)/i) || [, 'jpg'])[1].toLowerCase();
-    return `${base}.${ext === 'jpeg' ? 'jpg' : ext}`;
+function fileNameFor(g) {
+    const base = (g.title || 'ตารางกิจกรรม').replace(/[\\/:*?"<>|]+/g, ' ').trim().slice(0, 60);
+    const ext = (g.url.match(/\.(png|jpe?g|webp|gif)(\?|$)/i) || [, 'jpg'])[1].toLowerCase();
+    const n = g.total > 1 ? ` (${g.idx + 1})` : '';
+    return `${base}${n}.${ext === 'jpeg' ? 'jpg' : ext}`;
 }
+
 /* แคชไฟล์รูปไว้ล่วงหน้า — iOS อนุญาตให้เปิดแผ่นแชร์เฉพาะ "ตอนแตะ" ทันที
    ถ้ารอโหลดรูปก่อน (await) แล้วค่อยเรียกแชร์ ระบบจะเงียบไม่เปิดอะไรเลย */
 const eventFiles = new Map();        // image url → File (พร้อมใช้)
 const eventFileLoads = new Map();    // image url → Promise<File>
-function loadEventFile(ev) {
-    if (eventFiles.has(ev.image)) return Promise.resolve(eventFiles.get(ev.image));
-    if (eventFileLoads.has(ev.image)) return eventFileLoads.get(ev.image);
-    const p = fetch(ev.image, { mode: 'cors' })
+function loadEventFile(g) {
+    if (eventFiles.has(g.url)) return Promise.resolve(eventFiles.get(g.url));
+    if (eventFileLoads.has(g.url)) return eventFileLoads.get(g.url);
+    const p = fetch(g.url, { mode: 'cors' })
         .then(res => { if (!res.ok) throw new Error('fetch ' + res.status); return res.blob(); })
         .then(blob => {
-            const file = new File([blob], fileNameFor(ev), { type: blob.type || 'image/jpeg' });
-            eventFiles.set(ev.image, file);
+            const file = new File([blob], fileNameFor(g), { type: blob.type || 'image/jpeg' });
+            eventFiles.set(g.url, file);
             return file;
         })
-        .catch(e => { eventFileLoads.delete(ev.image); throw e; });
-    eventFileLoads.set(ev.image, p);
+        .catch(e => { eventFileLoads.delete(g.url); throw e; });
+    eventFileLoads.set(g.url, p);
     return p;
 }
 function prefetchEventFiles() {
     if (!isTouch || !navigator.canShare) return;
-    const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
-    items.slice(0, 6).forEach(ev => loadEventFile(ev).catch(() => {}));
+    gallery.slice(0, 8).forEach(g => loadEventFile(g).catch(() => {}));
 }
 const canShareFile = file => !!(navigator.canShare && file && navigator.canShare({ files: [file] }));
 
@@ -933,21 +975,19 @@ async function shareFile(file, title) {
     }
 }
 
-async function downloadImage(i, btn) {
-    const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
-    const ev = items[i];
-    if (!ev) return;
-    const title = ev.title || 'ตารางกิจกรรม';
+async function downloadImage(gi, btn) {
+    const g = gallery[gi];
+    if (!g) return;
 
     // มือถือ + รูปพร้อมแล้ว → เปิดแผ่นแชร์ทันที (มี "บันทึกรูปภาพ")
-    const ready = eventFiles.get(ev.image);
-    if (isTouch && canShareFile(ready)) { await shareFile(ready, title); return; }
+    const ready = eventFiles.get(g.url);
+    if (isTouch && canShareFile(ready)) { await shareFile(ready, g.title); return; }
 
     if (btn) btn.classList.add('busy');
     try {
-        const file = await loadEventFile(ev);
+        const file = await loadEventFile(g);
         if (isTouch && canShareFile(file)) {
-            if (!(await shareFile(file, title))) toast('รูปพร้อมแล้ว · แตะปุ่มอีกครั้ง');
+            if (!(await shareFile(file, g.title))) toast('รูปพร้อมแล้ว · แตะปุ่มอีกครั้ง');
         } else {
             const url = URL.createObjectURL(file);
             const a = document.createElement('a');
@@ -957,7 +997,7 @@ async function downloadImage(i, btn) {
         }
     } catch (e) {
         // ดึงไฟล์ข้ามเว็บไม่ได้ (เช่นรูปจาก Drive) → เปิดรูปในแท็บใหม่ให้บันทึกเอง
-        window.open(ev.image, '_blank', 'noopener');
+        window.open(g.url, '_blank', 'noopener');
         toast('เปิดรูปแล้ว · กดค้างที่รูปเพื่อบันทึก');
     } finally {
         if (btn) btn.classList.remove('busy');
@@ -969,19 +1009,44 @@ window.downloadImage = downloadImage;
 const imgModal = $('#imgModal');
 let imgModalIndex = 0;
 $('#imgDownload').addEventListener('click', () => downloadImage(imgModalIndex, $('#imgDownload')));
-function openImage(i) {
-    imgModalIndex = i;
-    const items = (eventsData && eventsData.length) ? eventsData : EVENTS_DEFAULT;
-    const ev = items[i];
-    if (!ev) return true;
-    $('#imgFull').src = ev.image;
-    $('#imgFull').alt = ev.title || 'ตารางกิจกรรม';
-    $('#imgTitle').textContent = ev.title || 'ตารางกิจกรรม';
-    $('#imgOpen').href = ev.image;
-    if (typeof imgModal.showModal === 'function') { imgModal.showModal(); $('#imgBody').scrollTop = 0; return false; }
+
+function openImage(gi) {
+    const g = gallery[gi];
+    if (!g) return true;
+    imgModalIndex = gi;
+    $('#imgFull').src = g.url;
+    $('#imgFull').alt = g.title;
+    $('#imgTitle').textContent = g.title;
+    $('#imgOpen').href = g.url;
+    $('#imgCount').textContent = g.total > 1 ? `${g.idx + 1}/${g.total}` : '';
+    $('#imgCount').hidden = g.total < 2;
+    $('#imgPrev').hidden = $('#imgNext').hidden = g.total < 2;
+    $('#imgPrev').disabled = gi <= g.first;
+    $('#imgNext').disabled = gi >= g.last;
+    if (typeof imgModal.showModal === 'function') {
+        if (!imgModal.open) imgModal.showModal();
+        $('#imgBody').scrollTop = 0;
+        return false;
+    }
     return true;   // เบราว์เซอร์เก่า: เปิดรูปในแท็บใหม่แทน
 }
 window.openImage = openImage;
+
+/** เลื่อนดูรูปถัดไป/ก่อนหน้า ภายในโพสต์เดียวกัน */
+function stepImage(dir) {
+    const g = gallery[imgModalIndex];
+    if (!g) return;
+    const next = imgModalIndex + dir;
+    if (next < g.first || next > g.last) return;
+    openImage(next);
+}
+$('#imgPrev').addEventListener('click', e => { e.stopPropagation(); stepImage(-1); });
+$('#imgNext').addEventListener('click', e => { e.stopPropagation(); stepImage(1); });
+imgModal.addEventListener('keydown', e => {
+    if (e.key === 'ArrowLeft') { e.preventDefault(); stepImage(-1); }
+    if (e.key === 'ArrowRight') { e.preventDefault(); stepImage(1); }
+});
+
 $('#imgClose').addEventListener('click', () => imgModal.close());
 imgModal.addEventListener('click', e => { if (e.target === imgModal || e.target === $('#imgBody')) imgModal.close(); });
 imgModal.addEventListener('close', () => { $('#imgFull').src = ''; });

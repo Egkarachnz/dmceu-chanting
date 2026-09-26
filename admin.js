@@ -132,7 +132,7 @@ async function loadEvents() {
     loadingList = true;
     $('#adminSub').textContent = 'กำลังโหลด…';
     const { data, error } = await db.from('events')
-        .select('id,title,description,link,image_path,width,height,sort,visible,created_at,updated_at')
+        .select('id,title,description,link,images,image_path,width,height,sort,visible,created_at,updated_at')
         .order('sort', { ascending: true })
         .order('created_at', { ascending: false });
     loadingList = false;
@@ -145,27 +145,38 @@ async function loadEvents() {
     renderList();
 }
 
+/** รูปทั้งหมดของโพสต์ (รองรับแถวเก่าที่มีแค่ image_path) */
+function evImages(ev) {
+    const list = Array.isArray(ev.images) ? ev.images.filter(im => im && im.path) : [];
+    if (list.length) return list;
+    return ev.image_path ? [{ path: ev.image_path, width: ev.width, height: ev.height }] : [];
+}
+
 function renderList() {
     const shown = events.filter(e => e.visible).length;
+    const photos = events.reduce((n, e) => n + evImages(e).length, 0);
     $('#adminSub').textContent = events.length
-        ? `${events.length} รายการ · แสดงบนเว็บ ${shown}` : 'ยังไม่มีรูปกิจกรรม';
+        ? `${events.length} โพสต์ · ${photos} รูป · แสดงบนเว็บ ${shown}` : 'ยังไม่มีโพสต์กิจกรรม';
 
     const list = $('#eventList');
     if (!events.length) {
-        list.innerHTML = `<div class="admin-empty">${icon('image')}<span>ยังไม่มีรูป · กดปุ่มด้านบนเพื่อเพิ่มรูปแรก</span></div>`;
+        list.innerHTML = `<div class="admin-empty">${icon('image')}<span>ยังไม่มีโพสต์ · กดปุ่มด้านบนเพื่อเพิ่มโพสต์แรก</span></div>`;
         return;
     }
-    list.innerHTML = events.map((ev, i) => `
+    list.innerHTML = events.map((ev, i) => {
+        const imgs = evImages(ev);
+        return `
         <article class="ev-row${ev.visible ? '' : ' hidden-row'}" data-id="${ev.id}">
             <div class="ev-thumb">
-                <img src="${esc(publicUrl(ev.image_path))}" alt="" loading="lazy">
+                <img src="${esc(publicUrl(imgs[0] && imgs[0].path))}" alt="" loading="lazy">
+                ${imgs.length > 1 ? `<span class="ev-count">${imgs.length} รูป</span>` : ''}
                 ${ev.visible ? '' : '<span class="ev-hidden-badge">ซ่อนอยู่</span>'}
             </div>
             <div class="ev-body">
                 <h3 class="ev-title">${esc(ev.title) || '<span style="color:var(--text-mute)">(ไม่มีหัวข้อ)</span>'}</h3>
                 ${ev.description ? `<p class="ev-desc">${esc(ev.description)}</p>` : ''}
                 <div class="ev-meta">
-                    ${ev.width ? `<span>${ev.width}×${ev.height}</span>` : ''}
+                    <span>${imgs.length} รูป</span>
                     <span>อัปเดต ${fmtDate(ev.updated_at)}</span>
                     ${ev.link ? `<span>${icon('link')} มีลิงก์</span>` : ''}
                 </div>
@@ -178,7 +189,8 @@ function renderList() {
                 <span class="spacer"></span>
                 <button class="icon-btn danger" type="button" data-act="delete" title="ลบ">${icon('trash')}</button>
             </div>
-        </article>`).join('');
+        </article>`;
+    }).join('');
 }
 
 $('#eventList').addEventListener('click', async e => {
@@ -227,7 +239,8 @@ async function move(ev, dir) {
 let pendingDelete = null;
 function confirmDelete(ev) {
     pendingDelete = ev;
-    $('#confirmText').textContent = `“${ev.title || 'รูปไม่มีหัวข้อ'}” จะถูกลบออกจากหน้าเว็บทันที และกู้คืนไม่ได้`;
+    const n = evImages(ev).length;
+    $('#confirmText').textContent = `“${ev.title || 'โพสต์ไม่มีหัวข้อ'}” (${n} รูป) จะถูกลบออกจากหน้าเว็บทันที และกู้คืนไม่ได้`;
     $('#confirmModal').showModal();
 }
 $('#confirmNo').addEventListener('click', () => $('#confirmModal').close());
@@ -238,7 +251,8 @@ $('#confirmYes').addEventListener('click', async () => {
     try {
         const { error } = await db.from('events').delete().eq('id', ev.id);
         if (error) throw error;
-        await db.storage.from(SUPA.bucket).remove([ev.image_path]);   // ไฟล์ค้างไม่เป็นไร ถ้าลบไม่ได้
+        const paths = evImages(ev).map(im => im.path);
+        if (paths.length) await db.storage.from(SUPA.bucket).remove(paths);   // ไฟล์ค้างไม่เป็นไร ถ้าลบไม่ได้
         events = events.filter(x => x.id !== ev.id);
         renderList();
         toast('ลบแล้ว');
@@ -250,15 +264,24 @@ $('#confirmYes').addEventListener('click', async () => {
     pendingDelete = null;
 });
 
-/* ─── ฟอร์มเพิ่ม/แก้ไข ─── */
+/* ─── ฟอร์มเพิ่ม/แก้ไขโพสต์ ─── */
 const editModal = $('#editModal');
-let editing = null;          // แถวที่กำลังแก้ (null = เพิ่มใหม่)
-let picked = null;           // { blob, width, height, previewUrl } รูปที่เลือกและย่อแล้ว
+let editing = null;      // แถวที่กำลังแก้ (null = โพสต์ใหม่)
+let shots = [];          // รูปในโพสต์ ตามลำดับที่จะแสดง
+                         //   เดิม:  { kind:'old', path, width, height, url }
+                         //   ใหม่:  { kind:'new', blob, width, height, ext, url }
+let removedPaths = [];   // รูปเดิมที่ถูกเอาออก (ลบไฟล์ตอนบันทึกสำเร็จ)
+
+function releaseShots() {
+    shots.forEach(sh => { if (sh.kind === 'new' && sh.url) URL.revokeObjectURL(sh.url); });
+    shots = [];
+    removedPaths = [];
+}
 
 function openEditor(ev) {
+    releaseShots();
     editing = ev || null;
-    picked = null;
-    $('#editTitle').textContent = ev ? 'แก้ไขรูปตารางกิจกรรม' : 'เพิ่มรูปตารางกิจกรรม';
+    $('#editTitle').textContent = ev ? 'แก้ไขโพสต์กิจกรรม' : 'เพิ่มโพสต์กิจกรรม';
     $('#fTitle').value = ev ? ev.title : '';
     $('#fDesc').value = ev ? ev.description : '';
     $('#fLink').value = ev ? ev.link : '';
@@ -268,62 +291,108 @@ function openEditor(ev) {
     $('#uploadProgress').hidden = true;
     $('#uploadFill').style.width = '0';
     if (ev) {
-        showPreview(publicUrl(ev.image_path), ev.width && ev.height ? `${ev.width}×${ev.height}` : 'รูปปัจจุบัน');
-    } else {
-        $('#dropEmpty').hidden = false;
-        $('#dropPreview').hidden = true;
+        shots = evImages(ev).map(im => ({
+            kind: 'old', path: im.path, width: im.width, height: im.height, url: publicUrl(im.path)
+        }));
     }
+    renderShots();
     editModal.showModal();
     $('#editForm').scrollTop = 0;
 }
-function showPreview(url, meta) {
-    $('#previewImg').src = url;
-    $('#previewMeta').textContent = meta;
-    $('#dropEmpty').hidden = true;
-    $('#dropPreview').hidden = false;
+
+function renderShots() {
+    const box = $('#shots');
+    $('#dropEmpty').hidden = shots.length > 0;
+    box.hidden = shots.length === 0;
+    $('#shotsHint').hidden = shots.length < 2;
+    if (!shots.length) { box.innerHTML = ''; return; }
+
+    box.innerHTML = shots.map((sh, i) => `
+        <div class="shot" data-i="${i}">
+            <img src="${esc(sh.url)}" alt="">
+            ${i === 0 ? '<span class="shot-cover">ปก</span>' : ''}
+            ${sh.kind === 'new' ? '<span class="shot-new">ใหม่</span>' : ''}
+            <button class="shot-x" type="button" data-sact="remove" title="เอารูปนี้ออก">${icon('close')}</button>
+            <div class="shot-move">
+                <button type="button" data-sact="left" title="เลื่อนซ้าย" ${i === 0 ? 'disabled' : ''}>${icon('chev-left')}</button>
+                <button type="button" data-sact="right" title="เลื่อนขวา" ${i === shots.length - 1 ? 'disabled' : ''}>${icon('chev-right')}</button>
+            </div>
+        </div>`).join('') +
+        `<button class="shot-add" type="button" id="shotAdd" title="เพิ่มรูปอีก">${icon('plus')}<span>เพิ่มรูป</span></button>`;
 }
+
+$('#shots').addEventListener('click', e => {
+    if (e.target.closest('#shotAdd')) { $('#fileInput').click(); return; }
+    const btn = e.target.closest('[data-sact]');
+    if (!btn) return;
+    e.stopPropagation();
+    const i = +btn.closest('.shot').dataset.i;
+    const act = btn.dataset.sact;
+    if (act === 'remove') {
+        const [sh] = shots.splice(i, 1);
+        if (sh.kind === 'new') URL.revokeObjectURL(sh.url);
+        else removedPaths.push(sh.path);
+    } else {
+        const j = act === 'left' ? i - 1 : i + 1;
+        if (j < 0 || j >= shots.length) return;
+        [shots[i], shots[j]] = [shots[j], shots[i]];
+    }
+    renderShots();
+});
 
 $('#addBtn').addEventListener('click', () => openEditor(null));
 $('#editClose').addEventListener('click', () => editModal.close());
 $('#editCancel').addEventListener('click', () => editModal.close());
-editModal.addEventListener('close', () => {
-    if (picked && picked.previewUrl) URL.revokeObjectURL(picked.previewUrl);
-    picked = null; editing = null;
-});
+editModal.addEventListener('close', () => { releaseShots(); editing = null; });
 
 const drop = $('#drop');
-drop.addEventListener('click', () => $('#fileInput').click());
-drop.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#fileInput').click(); } });
-$('#fileInput').addEventListener('change', () => { const f = $('#fileInput').files[0]; if (f) handleFile(f); });
+drop.addEventListener('click', e => { if (!e.target.closest('.shot')) $('#fileInput').click(); });
+drop.addEventListener('keydown', e => {
+    if (e.target !== drop) return;
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#fileInput').click(); }
+});
+$('#fileInput').addEventListener('change', () => {
+    const files = Array.from($('#fileInput').files || []);
+    $('#fileInput').value = '';
+    if (files.length) handleFiles(files);
+});
 ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
 ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
-drop.addEventListener('drop', e => { const f = e.dataTransfer.files && e.dataTransfer.files[0]; if (f) handleFile(f); });
+drop.addEventListener('drop', e => {
+    const files = Array.from(e.dataTransfer.files || []).filter(f => /^image\//.test(f.type));
+    if (files.length) handleFiles(files);
+});
 document.addEventListener('paste', e => {
     if (!editModal.open) return;
-    const item = Array.from(e.clipboardData.items || []).find(i => i.type.startsWith('image/'));
-    if (item) handleFile(item.getAsFile());
+    const files = Array.from(e.clipboardData.items || [])
+        .filter(i => i.type.startsWith('image/')).map(i => i.getAsFile()).filter(Boolean);
+    if (files.length) handleFiles(files);
 });
 
-async function handleFile(file) {
+const MAX_SHOTS = 20;
+async function handleFiles(files) {
     showError('#editError', '');
-    if (!/^image\//.test(file.type) && !/\.(heic|heif|jpe?g|png|webp)$/i.test(file.name)) {
-        return showError('#editError', 'ไฟล์นี้ไม่ใช่รูปภาพ');
+    const room = MAX_SHOTS - shots.length;
+    if (room <= 0) return showError('#editError', `ใส่ได้สูงสุด ${MAX_SHOTS} รูปต่อโพสต์`);
+    const take = files.slice(0, room);
+    if (files.length > room) toast(`ใส่ได้อีก ${room} รูปในโพสต์นี้`);
+
+    const firstName = take[0] && take[0].name;
+    let failed = 0;
+    for (const file of take) {
+        if (!/^image\//.test(file.type) && !/\.(heic|heif|jpe?g|png|webp)$/i.test(file.name)) { failed++; continue; }
+        try {
+            const out = await shrinkImage(file);
+            shots.push({ kind: 'new', blob: out.blob, width: out.width, height: out.height, ext: out.ext, url: URL.createObjectURL(out.blob) });
+            renderShots();
+        } catch (err) { failed++; }
     }
-    $('#previewMeta').textContent = 'กำลังเตรียมรูป…';
-    try {
-        const out = await shrinkImage(file);
-        if (picked && picked.previewUrl) URL.revokeObjectURL(picked.previewUrl);
-        picked = out;
-        picked.previewUrl = URL.createObjectURL(out.blob);
-        showPreview(picked.previewUrl, `${out.width}×${out.height} · ${fmtBytes(out.blob.size)}`);
-        // เติมหัวข้อจากชื่อไฟล์ให้ ถ้าชื่อไฟล์ดูมีความหมาย (ไม่ใช่ IMG_1234 / Screenshot)
-        const base = file.name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
-        if (!$('#fTitle').value && !editing && base && !/^(img|dsc|pxl|image|photo|screenshot|scan)\b|^\d+$/i.test(base)) {
-            $('#fTitle').value = base;
-        }
-    } catch (err) {
-        showError('#editError', 'เปิดรูปไม่ได้ · ถ้าเป็น HEIC ลองส่งออกเป็น JPG ก่อน');
-        picked = null;
+    if (failed) showError('#editError', `เปิดรูปไม่ได้ ${failed} ไฟล์ · ถ้าเป็น HEIC ลองส่งออกเป็น JPG ก่อน`);
+
+    // เติมหัวข้อจากชื่อไฟล์ให้ ถ้าชื่อไฟล์ดูมีความหมาย (ไม่ใช่ IMG_1234 / Screenshot)
+    const base = (firstName || '').replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+    if (!$('#fTitle').value && !editing && base && !/^(img|dsc|pxl|image|photo|screenshot|scan)\b|^\d+$/i.test(base)) {
+        $('#fTitle').value = base;
     }
 }
 
@@ -384,7 +453,7 @@ function uploadBlob(path, blob, onProgress) {
 $('#editForm').addEventListener('submit', async e => {
     e.preventDefault();
     showError('#editError', '');
-    if (!editing && !picked) return showError('#editError', 'กรุณาเลือกรูปก่อน');
+    if (!shots.length) return showError('#editError', 'กรุณาเลือกรูปอย่างน้อย 1 รูป');
 
     const payload = {
         title: $('#fTitle').value.trim(),
@@ -397,40 +466,55 @@ $('#editForm').addEventListener('submit', async e => {
     const saveBtn = $('#editSave');
     saveBtn.classList.add('busy');
     const prog = $('#uploadProgress'), fill = $('#uploadFill'), text = $('#uploadText');
+    const uploaded = [];   // path ของรูปที่เพิ่งอัปขึ้นไป (ลบทิ้งถ้าบันทึกพลาด)
 
     try {
         // ต่ออายุ token ก่อน เผื่อเปิดหน้าค้างไว้นาน
-        const { data: s } = await db.auth.getSession();
-        if (!s.session) throw new Error('หมดเวลาเข้าสู่ระบบ · กรุณาเข้าสู่ระบบใหม่');
-        session = s.session;
+        const { data: sess } = await db.auth.getSession();
+        if (!sess.session) throw new Error('หมดเวลาเข้าสู่ระบบ · กรุณาเข้าสู่ระบบใหม่');
+        session = sess.session;
 
-        let oldPath = null;
-        if (picked) {
-            prog.hidden = false; fill.style.width = '0'; text.textContent = 'กำลังอัปโหลดรูป…';
-            const path = `posters/${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.${picked.ext}`;
-            await uploadBlob(path, picked.blob, p => { fill.style.width = Math.round(p * 100) + '%'; });
-            fill.style.width = '100%'; text.textContent = 'กำลังบันทึกข้อมูล…';
-            if (editing) oldPath = editing.image_path;
-            Object.assign(payload, { image_path: path, width: picked.width, height: picked.height });
+        const pending = shots.filter(sh => sh.kind === 'new');
+        if (pending.length) {
+            prog.hidden = false;
+            fill.style.width = '0';
+            let done = 0;
+            for (const sh of pending) {
+                text.textContent = pending.length > 1
+                    ? `กำลังอัปโหลดรูป ${done + 1}/${pending.length}…` : 'กำลังอัปโหลดรูป…';
+                const path = `posters/${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}.${sh.ext}`;
+                await uploadBlob(path, sh.blob, frac => {
+                    fill.style.width = Math.round(((done + frac) / pending.length) * 100) + '%';
+                });
+                sh.path = path;
+                uploaded.push(path);
+                done++;
+                fill.style.width = Math.round((done / pending.length) * 100) + '%';
+            }
+            text.textContent = 'กำลังบันทึกข้อมูล…';
         }
+
+        payload.images = shots.map(sh => ({ path: sh.path, width: sh.width, height: sh.height }));
 
         if (editing) {
             const { data, error } = await db.from('events').update(payload).eq('id', editing.id).select().single();
             if (error) throw error;
             Object.assign(editing, data);
-            if (oldPath) db.storage.from(SUPA.bucket).remove([oldPath]);
+            if (removedPaths.length) db.storage.from(SUPA.bucket).remove(removedPaths);
             toast('บันทึกการแก้ไขแล้ว');
         } else {
             const minSort = events.length ? Math.min(...events.map(x => x.sort)) : 10;
-            payload.sort = minSort - 10;   // ให้รูปใหม่ขึ้นบนสุด
+            payload.sort = minSort - 10;   // โพสต์ใหม่ขึ้นบนสุด
             const { data, error } = await db.from('events').insert(payload).select().single();
             if (error) throw error;
             events.unshift(data);
-            toast('เพิ่มรูปแล้ว · จะขึ้นหน้าเว็บภายในไม่กี่วินาที');
+            toast(`เพิ่มโพสต์แล้ว (${payload.images.length} รูป) · จะขึ้นหน้าเว็บภายในไม่กี่วินาที`);
         }
         renderList();
         editModal.close();
     } catch (err) {
+        if (uploaded.length) db.storage.from(SUPA.bucket).remove(uploaded).catch(() => {});
+        shots.forEach(sh => { if (sh.kind === 'new') delete sh.path; });
         showError('#editError', (err && err.message) || 'บันทึกไม่สำเร็จ');
     } finally {
         saveBtn.classList.remove('busy');

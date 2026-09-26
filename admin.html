@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=25">
-<link rel="stylesheet" href="admin.css?v=25">
+<link rel="stylesheet" href="styles.css?v=26">
+<link rel="stylesheet" href="admin.css?v=26">
 
 <script>
 (function () {
@@ -58,6 +58,8 @@
         <symbol id="i-external" viewBox="0 0 24 24"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><path d="M15 3h6v6M10 14 21 3"/></symbol>
         <symbol id="i-moon" viewBox="0 0 24 24"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></symbol>
         <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
+        <symbol id="i-chev-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
+        <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
         <symbol id="i-cards" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18"/></symbol>
     </defs>
 </svg>
@@ -109,7 +111,7 @@
     <section id="appView" hidden>
         <div class="admin-head">
             <div class="admin-head-text">
-                <h1 class="admin-title"><svg class="ic"><use href="#i-event"/></svg> ตารางกิจกรรม</h1>
+                <h1 class="admin-title"><svg class="ic"><use href="#i-event"/></svg> โพสต์กิจกรรม</h1>
                 <p class="admin-sub" id="adminSub">กำลังโหลด…</p>
             </div>
             <a class="btn-ghost btn-sm" href="./" target="_blank" rel="noopener">
@@ -120,8 +122,8 @@
         <button class="add-btn" id="addBtn" type="button">
             <span class="add-btn-ic"><svg class="ic"><use href="#i-plus"/></svg></span>
             <span class="add-btn-text">
-                <strong>เพิ่มรูปตารางกิจกรรม</strong>
-                <span>เลือกรูปจากเครื่อง · ย่อขนาดให้อัตโนมัติ</span>
+                <strong>เพิ่มโพสต์กิจกรรม</strong>
+                <span>ใส่ได้หลายรูปต่อโพสต์ · ย่อขนาดให้อัตโนมัติ</span>
             </span>
         </button>
 
@@ -137,23 +139,20 @@
 <dialog class="sheet-modal" id="editModal">
     <form class="modal-card edit-card" id="editForm" method="dialog">
         <div class="modal-head">
-            <h2 id="editTitle">เพิ่มรูปตารางกิจกรรม</h2>
+            <h2 id="editTitle">เพิ่มโพสต์กิจกรรม</h2>
             <button class="icon-btn" type="button" id="editClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
         </div>
 
-        <input type="file" id="fileInput" accept="image/*" hidden>
+        <input type="file" id="fileInput" accept="image/*" multiple hidden>
         <div class="drop" id="drop" tabindex="0" role="button" aria-label="เลือกรูป">
             <div class="drop-empty" id="dropEmpty">
                 <svg class="ic"><use href="#i-image"/></svg>
                 <strong>แตะเพื่อเลือกรูป</strong>
-                <span>หรือลากไฟล์มาวางที่นี่ · JPG / PNG / HEIC</span>
+                <span>เลือกได้หลายรูปพร้อมกัน · ลากมาวางก็ได้ · JPG / PNG / HEIC</span>
             </div>
-            <div class="drop-preview" id="dropPreview" hidden>
-                <img id="previewImg" alt="">
-                <span class="drop-meta" id="previewMeta"></span>
-                <span class="drop-change">แตะเพื่อเปลี่ยนรูป</span>
-            </div>
+            <div class="shots" id="shots" hidden></div>
         </div>
+        <p class="shots-hint" id="shotsHint" hidden>รูปแรกคือรูปปก · ใช้ปุ่มลูกศรสลับลำดับได้</p>
 
         <label class="field">
             <span class="field-label">หัวข้อ</span>
@@ -201,6 +200,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=25"></script>
+<script src="admin.js?v=26"></script>
 </body>
 </html>
