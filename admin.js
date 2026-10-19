@@ -186,7 +186,7 @@ async function buildReportBlob() {
     const fy = H - FOOT + 40;
     c.fillStyle = '#8a92ad'; c.font = `300 22px ${FONT}`; c.textAlign = 'center';
     c.fillText('ยังไม่มีข้อมูล = ช่องพระอาจารย์หรือหัวข้อเทศน์ในชีตยังว่าง', W / 2, fy);
-    c.fillText('DMCEU · หลังบ้านทีมงาน', W / 2, fy + 34);
+    c.fillText('Dhammakaya Meditation Center Europe · DMCEU', W / 2, fy + 34);
     c.textAlign = 'left';
 
     return new Promise(res => cv.toBlob(res, 'image/png'));
