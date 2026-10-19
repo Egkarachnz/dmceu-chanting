@@ -373,3 +373,21 @@ a.btn-primary { text-decoration: none; display: inline-flex; align-items: center
 }
 .field-textarea.mono { line-height: 1.55; }
 html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+
+/* ─── โหมดมืด/สว่าง: บอกระบบให้ตรงกับธีมที่แอปใช้อยู่ ───
+   หน้านี้สลับธีมด้วย data-theme (ปุ่มดวงอาทิตย์/พระจันทร์) ไม่ได้ตามระบบเสมอไป
+   ถ้าไม่บอก iOS จะวาดคีย์บอร์ดและแถบกรอกอัตโนมัติเป็นสีของระบบ ซึ่งสวนกับสีหน้าเว็บ
+   (เช่นแอปเป็นมืดแต่ระบบเป็นสว่าง) จนอ่านและกดข้อเสนอรหัสผ่านไม่ได้ */
+html[data-theme="dark"]  { color-scheme: dark; }
+html[data-theme="light"] { color-scheme: light; }
+
+/* เวลา iOS/Chrome เติมค่าอัตโนมัติจะทาพื้นเหลือง/ฟ้าทับ ให้คงสีของธีมไว้ */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus {
+    -webkit-text-fill-color: var(--text);
+    caret-color: var(--text);
+    -webkit-box-shadow: 0 0 0 1000px var(--surface-2) inset;
+    box-shadow: 0 0 0 1000px var(--surface-2) inset;
+    transition: background-color 9999s ease-out 0s;
+}
