@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=30">
-<link rel="stylesheet" href="admin.css?v=30">
+<link rel="stylesheet" href="styles.css?v=31">
+<link rel="stylesheet" href="admin.css?v=31">
 
 <script>
 (function () {
@@ -107,7 +107,13 @@
             </label>
             <label class="field">
                 <span class="field-label">รหัสผ่าน</span>
-                <input class="field-input" id="loginPass" type="password" name="password" autocomplete="current-password" required placeholder="••••••••">
+                <span class="field-pw">
+                    <input class="field-input" id="loginPass" type="password" name="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required placeholder="••••••••">
+                    <button class="field-eye" type="button" aria-label="แสดงรหัสผ่าน">
+                        <svg class="ic ic-on"><use href="#i-eye"/></svg>
+                        <svg class="ic ic-off"><use href="#i-eye-off"/></svg>
+                    </button>
+                </span>
             </label>
             <p class="field-error" id="loginError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
             <button class="btn-primary" id="loginBtn" type="submit">เข้าสู่ระบบ</button>
@@ -353,7 +359,7 @@
             <span class="field-label">รหัสผ่านใหม่</span>
             <span class="field-pw">
                 <input class="field-input" id="pwNew" type="password" name="new-password" autocomplete="new-password" minlength="8" required placeholder="อย่างน้อย 8 ตัวอักษร">
-                <button class="field-eye" type="button" id="pwEye" aria-label="แสดงรหัสผ่าน">
+                <button class="field-eye" type="button" aria-label="แสดงรหัสผ่าน">
                     <svg class="ic ic-on"><use href="#i-eye"/></svg>
                     <svg class="ic ic-off"><use href="#i-eye-off"/></svg>
                 </button>
@@ -362,7 +368,13 @@
 
         <label class="field">
             <span class="field-label">พิมพ์รหัสผ่านใหม่อีกครั้ง</span>
-            <input class="field-input" id="pwNew2" type="password" name="confirm-password" autocomplete="new-password" minlength="8" required placeholder="••••••••">
+            <span class="field-pw">
+                <input class="field-input" id="pwNew2" type="password" name="confirm-password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="8" required placeholder="••••••••">
+                <button class="field-eye" type="button" aria-label="แสดงรหัสผ่าน">
+                    <svg class="ic ic-on"><use href="#i-eye"/></svg>
+                    <svg class="ic ic-off"><use href="#i-eye-off"/></svg>
+                </button>
+            </span>
         </label>
 
         <ul class="modal-notes">
@@ -437,6 +449,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=30"></script>
+<script src="admin.js?v=31"></script>
 </body>
 </html>

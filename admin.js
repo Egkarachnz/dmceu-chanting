@@ -54,6 +54,28 @@ $('#themeBtn').addEventListener('click', () => {
 applyTheme(localStorage.getItem('theme') || 'auto');
 window.addEventListener('scroll', () => $('#appbar').classList.toggle('scrolled', window.scrollY > 4), { passive: true });
 
+/* ─── ปุ่มลืมตาดูรหัสผ่าน (ใช้ร่วมกันทุกช่องรหัสผ่าน) ───
+   บนมือถือพิมพ์รหัสยาว ๆ แล้วไม่เห็นว่าพิมพ์อะไรไป จึงให้กดดูได้ */
+function resetEyes(scope) {
+    $$(`${scope} .field-pw`).forEach(wrap => {
+        const input = wrap.querySelector('input');
+        const btn = wrap.querySelector('.field-eye');
+        if (input) input.type = 'password';
+        if (btn) { btn.classList.remove('on'); btn.setAttribute('aria-label', 'แสดงรหัสผ่าน'); }
+    });
+}
+document.addEventListener('click', e => {
+    const btn = e.target.closest && e.target.closest('.field-eye');
+    if (!btn) return;
+    e.preventDefault();
+    const input = btn.parentElement.querySelector('input');
+    if (!input) return;
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.classList.toggle('on', show);
+    btn.setAttribute('aria-label', show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน');
+});
+
 /* ─── Auth ─── */
 let session = null;
 
@@ -115,6 +137,7 @@ $('#loginForm').addEventListener('submit', async e => {
         return;
     }
     $('#loginPass').value = '';
+    resetEyes('#authView');
     await refreshAuth();
     toast('เข้าสู่ระบบแล้ว');
 });
@@ -136,8 +159,7 @@ const pwModal = $('#pwModal');
 $('#pwBtn').addEventListener('click', () => {
     $('#pwNew').value = '';
     $('#pwNew2').value = '';
-    $('#pwNew').type = 'password';
-    $('#pwEye').classList.remove('on');
+    resetEyes('#pwModal');
     $('#pwWho').textContent = session ? `บัญชี ${session.user.email}` : '';
     showError('#pwError', '');
     pwModal.showModal();
@@ -145,13 +167,6 @@ $('#pwBtn').addEventListener('click', () => {
 });
 $('#pwClose').addEventListener('click', () => pwModal.close());
 $('#pwCancel').addEventListener('click', () => pwModal.close());
-$('#pwEye').addEventListener('click', () => {
-    const f = $('#pwNew');
-    const show = f.type === 'password';
-    f.type = show ? 'text' : 'password';
-    $('#pwEye').classList.toggle('on', show);
-    $('#pwEye').setAttribute('aria-label', show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน');
-});
 
 $('#pwForm').addEventListener('submit', async e => {
     e.preventDefault();
