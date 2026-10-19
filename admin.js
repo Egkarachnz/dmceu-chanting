@@ -54,6 +54,38 @@ $('#themeBtn').addEventListener('click', () => {
 applyTheme(localStorage.getItem('theme') || 'auto');
 window.addEventListener('scroll', () => $('#appbar').classList.toggle('scrolled', window.scrollY > 4), { passive: true });
 
+/* ─── อัปเดตเองเมื่อกลับเข้าแอป ───
+   แอปที่กด "เพิ่มไปยังหน้าจอโฮม" บน iPhone จะค้างหน้าเดิมไว้ในหน่วยความจำ
+   เปิดกลับเข้ามาอีกทีก็ยังเป็นโค้ดเวอร์ชันเก่า จนกว่าจะลบไอคอนแล้วเพิ่มใหม่
+   จึงเทียบเลขเวอร์ชันกับไฟล์บนเซิร์ฟเวอร์ให้เอง ถ้าไม่ตรงค่อยโหลดใหม่ */
+const APP_V = (() => {
+    const tag = document.querySelector('script[src*="admin.js"]');
+    const m = tag && tag.getAttribute('src').match(/v=(\d+)/);
+    return m ? m[1] : '';
+})();
+let lastVerCheck = 0;
+
+async function newVersionOnServer() {
+    const res = await fetch('admin.html', { cache: 'no-store' });
+    const m = (await res.text()).match(/admin\.js\?v=(\d+)/);
+    return m && m[1] !== APP_V ? m[1] : null;
+}
+
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState !== 'visible' || !APP_V) return;
+    if (Date.now() - lastVerCheck < 60000) return;      // ไม่ถามถี่เกินไป
+    lastVerCheck = Date.now();
+
+    // กำลังกรอกข้อมูลอยู่ อย่าเพิ่งรีเฟรชทับ
+    if (document.querySelector('dialog[open]')) return;
+    const el = document.activeElement;
+    if (el && /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName)) return;
+
+    try {
+        if (await newVersionOnServer()) location.reload();
+    } catch (e) { /* ออฟไลน์อยู่ ไว้ค่อยเช็กรอบหน้า */ }
+});
+
 /* ─── ปุ่มลืมตาดูรหัสผ่าน (ใช้ร่วมกันทุกช่องรหัสผ่าน) ───
    บนมือถือพิมพ์รหัสยาว ๆ แล้วไม่เห็นว่าพิมพ์อะไรไป จึงให้กดดูได้ */
 function resetEyes(scope) {

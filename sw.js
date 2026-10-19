@@ -3,7 +3,7 @@
    Sheet data is JSONP from Google and is never cached here. */
 
 /* เวลาแก้ไฟล์ให้บัมพ์เลขนี้ และเลข ?v= ใน index.html ให้ตรงกัน */
-const ASSET_V = '31';
+const ASSET_V = '32';
 const VERSION = 'dmceu-ss15-v' + ASSET_V;
 const SHELL = [
     './',
@@ -47,7 +47,7 @@ self.addEventListener('fetch', event => {
         url.hostname.indexOf('supabase.co') > -1 || url.hostname.indexOf('jsdelivr.net') > -1) return;
 
     // หน้าหลังบ้าน (admin.*) ไม่ผ่านแคช — ต้องออนไลน์อยู่แล้วถึงใช้งานได้
-    if (/\/admin\.(html|js|css|webmanifest)$/.test(url.pathname)) return;
+    if (/\/admin(\.(html|js|css|webmanifest))?$/.test(url.pathname)) return;
 
     // Navigations: network first, fall back to the cached shell when offline.
     if (req.mode === 'navigate') {
