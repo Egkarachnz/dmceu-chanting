@@ -363,3 +363,13 @@ body.admin-page { padding-bottom: calc(var(--sat-bottom) + 40px); }
 .head-actions { display: flex; gap: 8px; flex: none; }
 .report-img { width: 100%; height: auto; max-height: 60vh; object-fit: contain; border-radius: 12px; border: 1px solid var(--line, rgba(0,0,0,.08)); background: #fff; }
 a.btn-primary { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* ─── กัน iPhone ซูมเข้าเองตอนแตะช่องกรอก ───
+   iOS จะซูมหน้าถ้าช่องกรอกมีตัวหนังสือเล็กกว่า 16px และในแอปบนหน้าจอโฮม
+   มักไม่ซูมกลับให้ ต้องใช้สองนิ้วซูมออกเอง จึงตั้งขั้นต่ำเป็น 16px */
+.field-input, input.field-input, select.field-input, textarea.field-input,
+.field-textarea, .field-textarea.mono {
+    font-size: 16px;
+}
+.field-textarea.mono { line-height: 1.55; }
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
