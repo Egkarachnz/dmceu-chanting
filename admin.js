@@ -299,12 +299,12 @@ $('#reportBtn').addEventListener('click', async () => {
         $('#reportImg').src = reportUrl;
         $('#reportSave').href = reportUrl;
         $('#reportSave').setAttribute('download', name);
-        // มือถือ: ปุ่มหลักคือแผ่นแชร์ (มี "บันทึกรูปภาพ" ลงอัลบั้ม) ส่วนดาวน์โหลดไฟล์ถอยไปเป็นปุ่มรอง
-        // เพราะ iOS เปิดไฟล์ที่ดาวน์โหลดด้วยหน้าดูไฟล์ ซึ่งไม่แสดงรูปและไม่ลงอัลบั้ม
+        // มือถือ (แชร์ไฟล์ได้): เหลือปุ่มแผ่นแชร์ปุ่มเดียว เพราะมี "บันทึกรูปภาพ" ลงอัลบั้มในตัว
+        // ส่วนดาวน์โหลดไฟล์บน iOS เปิดหน้าดูไฟล์ที่ไม่โชว์รูปและไม่ลงอัลบั้ม จึงซ่อนไว้
+        // คอมพิวเตอร์: ไม่มีแผ่นแชร์ ใช้ปุ่มดาวน์โหลดเป็นปุ่มเดียว
         const canShare = !!(navigator.canShare && navigator.canShare({ files: [reportFile] }));
         $('#reportShare').hidden = !canShare;
-        $('#reportSave').className = canShare ? 'btn-ghost' : 'btn-primary';
-        $('#reportSave').lastChild.textContent = canShare ? ' ดาวน์โหลด' : ' บันทึกเป็นไฟล์รูป';
+        $('#reportSave').hidden = canShare;
         $('#reportHint').hidden = !canShare;
         reportModal.showModal();
     } catch (err) {
