@@ -85,7 +85,14 @@ function showApp() {
     $('#appView').hidden = false;
     $('#logoutBtn').hidden = false;
     $('#logoutBtn').title = `ออกจากระบบ (${session.user.email})`;
+    let tab = 'schedule';
+    try { tab = localStorage.getItem('dmceu.admin.tab') || 'schedule'; } catch (e) {}
+    setTab(tab);
     loadEvents();
+    // ค่าตั้ง/ประเทศ ต้องมาก่อนวาดข้อความ LINE จึงโหลดให้เสร็จแล้วค่อยดึงตาราง
+    loadSettings()
+        .catch(err => toast('โหลดค่าตั้งไม่สำเร็จ: ' + (err.message || err)))
+        .finally(() => loadSchedule());
 }
 
 $('#loginForm').addEventListener('submit', async e => {
@@ -114,6 +121,7 @@ $('#logoutBtn').addEventListener('click', async () => {
     await db.auth.signOut();
     session = null;
     events = [];
+    sched = [];
     showAuth();
     toast('ออกจากระบบแล้ว');
 });
@@ -524,3 +532,464 @@ $('#editForm').addEventListener('submit', async e => {
 
 /* ─── Boot ─── */
 refreshAuth();
+
+
+/* ============================================================
+   ส่วนที่ 2 · ตารางสวดมนต์ (อ่านจาก Google Sheets / เขียนผ่าน Edge Function)
+   ============================================================ */
+
+const SHEET_ID  = '1pcqRU-76PFxUGj99ZVV5VlA028OaJ6nj7j12mXgOOzQ';
+const SHEET_TAB = 'ตารางสวดมนต์ซีซั่นที่ 16';
+const SEASON_CODE = 'SS16';
+const WRITE_FN  = `${SUPA.url}/functions/v1/sheet-write`;
+
+/* ── ตัวช่วยวันที่ (คัดจาก script.js ให้ admin.js ใช้ได้เอง) ── */
+const thaiMonthsFull = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                        'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+const thaiMonthsAbbr = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const thaiDays = ['วันอาทิตย์','วันจันทร์','วันอังคาร','วันพุธ','วันพฤหัสบดี','วันศุกร์','วันเสาร์'];
+
+/** เซลล์วันที่จาก gviz → Date */
+function parseGsDate(cell) {
+    if (!cell) return null;
+    if (typeof cell.v === 'string' && cell.v.indexOf('Date(') === 0) {
+        const m = cell.v.match(/Date\((\d+),\s*(\d+),\s*(\d+)/);
+        if (m) return new Date(+m[1], +m[2], +m[3]);
+    }
+    return null;
+}
+const ymd = d => d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : '';
+/** → "วันอาทิตย์ที่ 18 ตุลาคม พ.ศ.2569" */
+const thaiDateFull = d => d
+    ? `${thaiDays[d.getDay()]}ที่ ${d.getDate()} ${thaiMonthsFull[d.getMonth()]} พ.ศ.${d.getFullYear() + 543}`
+    : '';
+const thaiDateShort = d => d ? `${d.getDate()} ${thaiMonthsAbbr[d.getMonth()]}` : '–';
+
+/** "เวลาผนัง" ในโซนหนึ่ง + วันที่ → instant จริง (วนสองรอบเพื่อชดเชยช่วงเปลี่ยนเวลาฤดูร้อน) */
+function zonedToUtc(y, mo, d, hh, mm, tz) {
+    const target = Date.UTC(y, mo, d, hh, mm);
+    const offsetAt = ts => {
+        const p = new Intl.DateTimeFormat('en-US', {
+            timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit',
+            hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false
+        }).formatToParts(new Date(ts));
+        const g = t => +(p.find(x => x.type === t) || {}).value;
+        return Date.UTC(g('year'), g('month') - 1, g('day'), g('hour') % 24, g('minute'), g('second')) - ts;
+    };
+    let ts = target - offsetAt(target);
+    ts = target - offsetAt(ts);
+    return new Date(ts);
+}
+/** instant → "17.30" ในโซนที่ต้องการ */
+function timeInZone(instant, tz) {
+    return new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false })
+        .format(instant).replace(':', '.');
+}
+
+/* ── โหลดตารางจากชีต (gviz JSONP แบบเดียวกับหน้าเว็บหลัก) ── */
+let sched = [];            // [{ no, temple, round, date, monk, topic, join }]
+let schedFilter = 'todo';
+let schedLoading = false;
+
+function loadSchedule() {
+    if (schedLoading) return;
+    schedLoading = true;
+    $('#schedSub').textContent = 'กำลังโหลดจากชีต…';
+    const el = document.createElement('script');
+    el.src = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json;responseHandler:processSchedule` +
+             `&sheet=${encodeURIComponent(SHEET_TAB)}` +
+             `&tq=${encodeURIComponent('select A,B,C,D,E,F,G')}&_=${Date.now()}`;
+    el.async = true;
+    el.onerror = () => { el.remove(); schedLoading = false; $('#schedSub').textContent = 'โหลดชีตไม่สำเร็จ'; };
+    el.addEventListener('load', () => el.remove());
+    document.head.appendChild(el);
+}
+
+function processSchedule(response) {
+    schedLoading = false;
+    if (!response || response.status === 'error' || !response.table) {
+        $('#schedSub').textContent = 'โหลดชีตไม่สำเร็จ';
+        return;
+    }
+    const txt = (row, i) => {
+        const c = row.c[i];
+        if (!c || c.v === null || c.v === undefined) return '';
+        return String(c.f !== undefined && c.f !== null ? c.f : c.v).trim();
+    };
+    sched = [];
+    (response.table.rows || []).forEach(row => {
+        if (!row || !row.c) return;
+        const no = txt(row, 0);
+        if (!no || isNaN(no)) return;                       // ข้ามแถวคั่นและหมายเหตุท้ายตาราง
+        sched.push({
+            no, temple: txt(row, 1), round: txt(row, 2),
+            date: parseGsDate(row.c[3]), dateText: txt(row, 3),
+            monk: txt(row, 4), topic: txt(row, 5), join: txt(row, 6)
+        });
+    });
+    renderSchedule();
+    fillRoundPicker();
+    renderLineMessage();
+}
+window.processSchedule = processSchedule;
+
+const isTodo = r => !r.monk || !r.topic;
+const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
+
+function schedRows() {
+    const today = startOfToday();
+    if (schedFilter === 'all') return sched;
+    if (schedFilter === 'upcoming') return sched.filter(r => r.date && r.date >= today);
+    return sched.filter(r => isTodo(r) && (!r.date || r.date >= today));   // ยังไม่ได้กรอก + ยังมาไม่ถึง
+}
+
+function renderSchedule() {
+    const todo = sched.filter(r => isTodo(r) && (!r.date || r.date >= startOfToday())).length;
+    $('#schedSub').textContent = sched.length
+        ? `${sched.length} คิว · ยังไม่ได้กรอก ${todo}` : 'ไม่พบข้อมูลในชีต';
+
+    const rows = schedRows();
+    const list = $('#schedList');
+    if (!rows.length) {
+        list.innerHTML = `<div class="admin-empty">${icon('check')}<span>${
+            schedFilter === 'todo' ? 'กรอกครบทุกคิวแล้ว 🎉' : 'ไม่มีรายการในตัวกรองนี้'}</span></div>`;
+        return;
+    }
+    list.innerHTML = rows.map(r => `
+        <article class="sc-row${isTodo(r) ? ' todo' : ''}" data-round="${esc(r.round)}">
+            <div class="sc-date">
+                <strong>${esc(thaiDateShort(r.date))}</strong>
+                <span>${r.date ? esc(thaiDays[r.date.getDay()].replace('วัน', '')) : ''}</span>
+            </div>
+            <div class="sc-body">
+                <div class="sc-top">
+                    <span class="sc-round">ครั้งที่ ${esc(r.round)}</span>
+                    ${isTodo(r) ? '<span class="sc-badge">ยังไม่ได้กรอก</span>' : ''}
+                </div>
+                <h3 class="sc-temple">${esc(r.temple) || '—'}</h3>
+                <p class="sc-detail">${r.monk ? esc(r.monk) : '<em>ยังไม่มีพระอาจารย์</em>'}</p>
+                <p class="sc-detail">${r.topic ? esc(r.topic) : '<em>ยังไม่มีหัวข้อเทศน์</em>'}</p>
+            </div>
+            <button class="icon-btn sc-edit" type="button" title="แก้ไข">${icon('edit')}</button>
+        </article>`).join('');
+}
+
+$('#schedList').addEventListener('click', e => {
+    const row = e.target.closest('.sc-row');
+    if (!row) return;
+    const r = sched.find(x => x.round === row.dataset.round);
+    if (r) openRow(r);
+});
+$('#schedReload').addEventListener('click', () => loadSchedule());
+$('#schedFilter').addEventListener('click', e => {
+    const b = e.target.closest('[data-f]');
+    if (!b) return;
+    schedFilter = b.dataset.f;
+    $$('#schedFilter button').forEach(x => x.classList.toggle('on', x === b));
+    renderSchedule();
+});
+
+/* ── โมดัลแก้แถว → บันทึกลงชีต ── */
+const rowModal = $('#rowModal');
+let editingRow = null;
+
+function openRow(r) {
+    editingRow = r;
+    $('#rowTitle').textContent = `ครั้งที่ ${r.round} · ${thaiDateShort(r.date)}`;
+    $('#rNo').value = r.no;
+    $('#rRound').value = r.round;
+    $('#rTemple').value = r.temple;
+    $('#rDate').value = ymd(r.date);
+    $('#rMonk').value = r.monk;
+    $('#rTopic').value = r.topic;
+    $('#rJoin').value = r.join;
+    $('#rCountry').value = temples[r.temple] || '';
+    $('#countryList').innerHTML = [...new Set(Object.values(temples))].filter(Boolean)
+        .map(c => `<option value="${esc(c)}">`).join('');
+    showError('#rowError', '');
+    rowModal.showModal();
+    $('#rowForm').scrollTop = 0;
+}
+$('#rowClose').addEventListener('click', () => rowModal.close());
+$('#rowCancel').addEventListener('click', () => rowModal.close());
+rowModal.addEventListener('close', () => { editingRow = null; });
+
+/** เรียก Edge Function (ตรวจสิทธิ์แล้วส่งต่อไป Apps Script → ชีต) */
+async function sheetWrite(payload) {
+    const { data: s } = await db.auth.getSession();
+    if (!s.session) throw new Error('หมดเวลาเข้าสู่ระบบ · กรุณาเข้าสู่ระบบใหม่');
+    session = s.session;
+    const res = await fetch(WRITE_FN, {
+        method: 'POST',
+        headers: {
+            apikey: SUPA.key,
+            Authorization: 'Bearer ' + session.access_token,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+    });
+    let out = {};
+    try { out = await res.json(); } catch (e) { throw new Error('เซิร์ฟเวอร์ตอบกลับผิดรูปแบบ (HTTP ' + res.status + ')'); }
+    if (!res.ok || out.ok === false) throw new Error(out.error || 'บันทึกไม่สำเร็จ (HTTP ' + res.status + ')');
+    return out;
+}
+
+$('#rowForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    if (!editingRow) return;
+    showError('#rowError', '');
+    const btn = $('#rowSave');
+    btn.classList.add('busy');
+    const r = editingRow;
+    const country = $('#rCountry').value.trim();
+    const temple = $('#rTemple').value.trim();
+    try {
+        await sheetWrite({
+            action: 'update',
+            no: r.no,
+            round: r.round,
+            temple,
+            date: $('#rDate').value || undefined,
+            monk: $('#rMonk').value.trim(),
+            topic: $('#rTopic').value.trim(),
+            attendance: $('#rJoin').value.trim()
+        });
+        if (temple && country !== (temples[temple] || '')) await saveTemple(temple, country);
+        toast('บันทึกลงชีตแล้ว');
+        rowModal.close();
+        loadSchedule();                       // โหลดซ้ำเพื่อยืนยันว่าเข้าจริง
+    } catch (err) {
+        showError('#rowError', err.message || 'บันทึกไม่สำเร็จ');
+    } finally {
+        btn.classList.remove('busy');
+    }
+});
+
+/* ============================================================
+   ส่วนที่ 3 · ข้อความ LINE
+   ============================================================ */
+
+const DEFAULT_TPL = [
+    'โครงการบ้านกัลยาณมิตร {{season}}',
+    'สามัคคีธรรมพุทธศาสนิกชน',
+    'ในทวีปยุโรป🔹ครั้งที่ {{round}}',
+    '{{date_full}}',
+    '',
+    '“{{topic}}“',
+    '❖ โดย {{monk}}',
+    '{{temple}} {{country}}',
+    '🕰️➖➖➖➖➖➖➖',
+    'เวลา {{time_eu}} น.🇪🇺',
+    'เวลา {{time_gb}} น.🇬🇧',
+    'เวลา {{time_th}} น.🇹🇭',
+    '🎥➖➖➖➖➖➖➖',
+    'Meeting id: {{meeting_id}}',
+    'Passcode : {{passcode}}',
+    'หรือคลิกที่ลิ้งค์🌐📱',
+    '{{zoom_link}}'
+].join('\n');
+
+const DEFAULT_MSG = {
+    template: DEFAULT_TPL,
+    start: '18:30',
+    end: '20:45',
+    baseZone: 'Europe/Berlin',
+    zones: [['time_gb', 'Europe/London'], ['time_th', 'Asia/Bangkok']],
+    meetingId: '',
+    passcode: '',
+    zoomLink: ''
+};
+
+let msgCfg = Object.assign({}, DEFAULT_MSG);
+let temples = {};          // { ชื่อวัด: ประเทศ }
+
+async function loadSettings() {
+    const [{ data: st }, { data: tp }] = await Promise.all([
+        db.from('app_settings').select('value').eq('key', 'line_message').maybeSingle(),
+        db.from('temples').select('name,country')
+    ]);
+    msgCfg = Object.assign({}, DEFAULT_MSG, (st && st.value) || {});
+    temples = {};
+    (tp || []).forEach(t => { temples[t.name] = t.country; });
+}
+
+async function saveSettings() {
+    const { error } = await db.from('app_settings')
+        .upsert({ key: 'line_message', value: msgCfg }, { onConflict: 'key' });
+    if (error) throw error;
+}
+
+async function saveTemple(name, country) {
+    const { error } = await db.from('temples').upsert({ name, country }, { onConflict: 'name' });
+    if (error) throw error;
+    temples[name] = country;
+}
+
+/** ครั้งถัดไปที่ยังมาไม่ถึง (ไว้เลือกให้อัตโนมัติ) */
+function defaultRound() {
+    const today = startOfToday();
+    const next = sched.filter(r => r.date && r.date >= today).sort((a, b) => a.date - b.date)[0];
+    return next ? next.round : (sched[sched.length - 1] || {}).round;
+}
+
+function fillRoundPicker() {
+    const sel = $('#lineRound');
+    const keep = sel.value;
+    sel.innerHTML = sched.map(r =>
+        `<option value="${esc(r.round)}">ครั้งที่ ${esc(r.round)} · ${esc(thaiDateShort(r.date))} · ${esc(r.temple)}</option>`
+    ).join('');
+    sel.value = (keep && sched.some(r => r.round === keep)) ? keep : (defaultRound() || '');
+}
+
+/** ดึง Meeting ID จากลิงก์ zoom แบบ /j/<id> แล้วคั่นเป็น 3-3-4 */
+function meetingIdFrom(url) {
+    const m = String(url || '').match(/\/j\/(\d{9,12})/);
+    if (!m) return '';
+    const d = m[1];
+    return d.length === 10 ? `${d.slice(0, 3)} ${d.slice(3, 6)} ${d.slice(6)}`
+         : d.length === 11 ? `${d.slice(0, 3)} ${d.slice(3, 7)} ${d.slice(7)}` : d;
+}
+
+function buildMessage(r) {
+    if (!r) return { text: '', missing: ['ยังไม่ได้เลือกครั้งที่'] };
+
+    const missing = [];
+    if (!r.monk)  missing.push('ชื่อพระอาจารย์');
+    if (!r.topic) missing.push('หัวข้อเทศน์');
+    if (!r.date)  missing.push('วันที่');
+    const country = temples[r.temple] || '';
+    if (!country) missing.push(`ประเทศของ “${r.temple}”`);
+
+    // เวลาของ "วันนั้น" — ช่วงเปลี่ยนเวลาฤดูร้อน/ฤดูหนาวจะเลื่อนให้เอง
+    let times = { time_eu: '', time_gb: '', time_th: '' };
+    if (r.date) {
+        const [sh, sm] = msgCfg.start.split(':').map(Number);
+        const [eh, em] = msgCfg.end.split(':').map(Number);
+        const y = r.date.getFullYear(), mo = r.date.getMonth(), d = r.date.getDate();
+        const s = zonedToUtc(y, mo, d, sh, sm, msgCfg.baseZone);
+        const e = zonedToUtc(y, mo, d, eh, em, msgCfg.baseZone);
+        const span = tz => `${timeInZone(s, tz)}-${timeInZone(e, tz)}`;
+        times.time_eu = span(msgCfg.baseZone);
+        (msgCfg.zones || []).forEach(([key, tz]) => { times[key] = span(tz); });
+    }
+
+    const vals = Object.assign({
+        season: SEASON_CODE,
+        round: r.round,
+        date_full: thaiDateFull(r.date),
+        temple: r.temple,
+        country,
+        monk: r.monk,
+        topic: r.topic,
+        meeting_id: msgCfg.meetingId || meetingIdFrom(msgCfg.zoomLink),
+        passcode: msgCfg.passcode,
+        zoom_link: msgCfg.zoomLink
+    }, times);
+
+    if (!vals.meeting_id) missing.push('Meeting ID');
+    if (!vals.passcode)   missing.push('Passcode');
+    if (!vals.zoom_link)  missing.push('ลิงก์ Zoom');
+
+    const text = msgCfg.template.replace(/\{\{(\w+)\}\}/g, (m, k) =>
+        (vals[k] !== undefined && vals[k] !== null) ? String(vals[k]) : m);
+    return { text, missing };
+}
+
+function renderLineMessage() {
+    const r = sched.find(x => x.round === $('#lineRound').value);
+    const { text, missing } = buildMessage(r);
+    $('#lineOut').textContent = text;
+    $('#lineSub').textContent = r ? `ครั้งที่ ${r.round} · ${esc(r.temple)}` : 'ยังไม่มีข้อมูลในชีต';
+
+    const warn = $('#lineWarn');
+    warn.hidden = !missing.length;
+    if (missing.length) warn.querySelector('span').textContent = 'ยังขาด: ' + missing.join(' · ');
+    $('#lineCopy').disabled = !text;
+}
+
+$('#lineRound').addEventListener('change', renderLineMessage);
+
+$('#lineCopy').addEventListener('click', async () => {
+    const text = $('#lineOut').textContent;
+    if (!text) return;
+    try {
+        await navigator.clipboard.writeText(text);
+        toast('คัดลอกข้อความแล้ว · ไปวางในไลน์ได้เลย');
+    } catch (e) {
+        const ta = document.createElement('textarea');
+        ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); toast('คัดลอกข้อความแล้ว'); }
+        catch (e2) { toast('คัดลอกไม่ได้ · กดค้างที่ข้อความเพื่อคัดลอกเอง'); }
+        ta.remove();
+    }
+});
+
+$('#lineShare').addEventListener('click', () => {
+    const text = $('#lineOut').textContent;
+    if (text && navigator.share) navigator.share({ text }).catch(() => {});
+});
+if (navigator.share) $('#lineShare').hidden = false;
+
+/* ── โมดัลต้นแบบ ── */
+const tplModal = $('#tplModal');
+function openTpl() {
+    $('#tStart').value = msgCfg.start;
+    $('#tEnd').value = msgCfg.end;
+    $('#tMeeting').value = msgCfg.meetingId;
+    $('#tPass').value = msgCfg.passcode;
+    $('#tLink').value = msgCfg.zoomLink;
+    $('#tBody').value = msgCfg.template;
+    showError('#tplError', '');
+    tplModal.showModal();
+}
+$('#tplBtn').addEventListener('click', openTpl);
+$('#tplClose').addEventListener('click', () => tplModal.close());
+$('#tplReset').addEventListener('click', () => {
+    $('#tBody').value = DEFAULT_TPL;
+    $('#tStart').value = DEFAULT_MSG.start;
+    $('#tEnd').value = DEFAULT_MSG.end;
+});
+
+$('#tplForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    showError('#tplError', '');
+    const time = v => /^\d{2}:\d{2}$/.test(v);
+    if (!time($('#tStart').value) || !time($('#tEnd').value)) {
+        return showError('#tplError', 'กรุณากรอกเวลาเริ่มและเวลาเลิกให้ครบ');
+    }
+    const btn = $('#tplSave');
+    btn.classList.add('busy');
+    const before = Object.assign({}, msgCfg);
+    try {
+        msgCfg = Object.assign({}, msgCfg, {
+            start: $('#tStart').value,
+            end: $('#tEnd').value,
+            meetingId: $('#tMeeting').value.trim(),
+            passcode: $('#tPass').value.trim(),
+            zoomLink: $('#tLink').value.trim(),
+            template: $('#tBody').value
+        });
+        await saveSettings();
+        renderLineMessage();
+        tplModal.close();
+        toast('บันทึกต้นแบบแล้ว');
+    } catch (err) {
+        msgCfg = before;
+        showError('#tplError', (err && err.message) || 'บันทึกไม่สำเร็จ');
+    } finally {
+        btn.classList.remove('busy');
+    }
+});
+
+/* ── แท็บ ── */
+const PANES = { schedule: '#paneSchedule', events: '#paneEvents', line: '#paneLine' };
+function setTab(name) {
+    if (!PANES[name]) name = 'schedule';
+    Object.entries(PANES).forEach(([k, sel]) => { $(sel).hidden = k !== name; });
+    $$('.tab-btn').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+    try { localStorage.setItem('dmceu.admin.tab', name); } catch (e) {}
+    if (name === 'line') renderLineMessage();
+    window.scrollTo(0, 0);
+}
+$$('.tab-btn').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));

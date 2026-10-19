@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=26">
-<link rel="stylesheet" href="admin.css?v=26">
+<link rel="stylesheet" href="styles.css?v=27">
+<link rel="stylesheet" href="admin.css?v=27">
 
 <script>
 (function () {
@@ -60,6 +60,11 @@
         <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></symbol>
         <symbol id="i-chev-left" viewBox="0 0 24 24"><path d="m15 18-6-6 6-6"/></symbol>
         <symbol id="i-chev-right" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+        <symbol id="i-table" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 10v10"/></symbol>
+        <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 12a8 8 0 0 1-11.6 7.1L3 21l1.9-6.4A8 8 0 1 1 21 12z"/></symbol>
+        <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
+        <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4M12 2v13"/></symbol>
+        <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
         <symbol id="i-cards" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18"/></symbol>
     </defs>
 </svg>
@@ -109,29 +114,100 @@
 
     <!-- ─── หน้าหลักหลังบ้าน ─── -->
     <section id="appView" hidden>
-        <div class="admin-head">
-            <div class="admin-head-text">
-                <h1 class="admin-title"><svg class="ic"><use href="#i-event"/></svg> โพสต์กิจกรรม</h1>
-                <p class="admin-sub" id="adminSub">กำลังโหลด…</p>
+        <nav class="tabs" id="tabs" role="tablist">
+            <button class="tab-btn on" type="button" data-tab="schedule" role="tab">
+                <svg class="ic"><use href="#i-table"/></svg><span>ตารางสวดมนต์</span>
+            </button>
+            <button class="tab-btn" type="button" data-tab="events" role="tab">
+                <svg class="ic"><use href="#i-event"/></svg><span>กิจกรรม</span>
+            </button>
+            <button class="tab-btn" type="button" data-tab="line" role="tab">
+                <svg class="ic"><use href="#i-chat"/></svg><span>ข้อความ LINE</span>
+            </button>
+        </nav>
+
+        <!-- ══ แท็บ 1 · ตารางสวดมนต์ (เขียนลง Google Sheets) ══ -->
+        <div class="pane" id="paneSchedule">
+            <div class="admin-head">
+                <div class="admin-head-text">
+                    <h1 class="admin-title"><svg class="ic"><use href="#i-table"/></svg> ตารางสวดมนต์</h1>
+                    <p class="admin-sub" id="schedSub">กำลังโหลด…</p>
+                </div>
+                <button class="btn-ghost btn-sm" id="schedReload" type="button" title="โหลดจากชีตใหม่">
+                    <svg class="ic"><use href="#i-refresh"/></svg> โหลดใหม่
+                </button>
             </div>
-            <a class="btn-ghost btn-sm" href="./" target="_blank" rel="noopener">
-                <svg class="ic"><use href="#i-external"/></svg> ดูหน้าเว็บ
-            </a>
+
+            <div class="seg" id="schedFilter">
+                <button type="button" class="on" data-f="todo">ยังไม่ได้กรอก</button>
+                <button type="button" data-f="upcoming">กำลังจะถึง</button>
+                <button type="button" data-f="all">ทั้งหมด</button>
+            </div>
+
+            <div class="admin-list" id="schedList"></div>
+
+            <p class="admin-foot">
+                แก้แล้วบันทึกลง Google Sheets ให้ทันที · หน้าเว็บสาธารณะจะอัปเดตตามภายในประมาณ 30 วินาที
+            </p>
         </div>
 
-        <button class="add-btn" id="addBtn" type="button">
-            <span class="add-btn-ic"><svg class="ic"><use href="#i-plus"/></svg></span>
-            <span class="add-btn-text">
-                <strong>เพิ่มโพสต์กิจกรรม</strong>
-                <span>ใส่ได้หลายรูปต่อโพสต์ · ย่อขนาดให้อัตโนมัติ</span>
-            </span>
-        </button>
+        <!-- ══ แท็บ 2 · โพสต์กิจกรรม ══ -->
+        <div class="pane" id="paneEvents" hidden>
+            <div class="admin-head">
+                <div class="admin-head-text">
+                    <h1 class="admin-title"><svg class="ic"><use href="#i-event"/></svg> โพสต์กิจกรรม</h1>
+                    <p class="admin-sub" id="adminSub">กำลังโหลด…</p>
+                </div>
+                <a class="btn-ghost btn-sm" href="./" target="_blank" rel="noopener">
+                    <svg class="ic"><use href="#i-external"/></svg> ดูหน้าเว็บ
+                </a>
+            </div>
 
-        <div class="admin-list" id="eventList"></div>
+            <button class="add-btn" id="addBtn" type="button">
+                <span class="add-btn-ic"><svg class="ic"><use href="#i-plus"/></svg></span>
+                <span class="add-btn-text">
+                    <strong>เพิ่มโพสต์กิจกรรม</strong>
+                    <span>ใส่ได้หลายรูปต่อโพสต์ · ย่อขนาดให้อัตโนมัติ</span>
+                </span>
+            </button>
 
-        <p class="admin-foot">
-            รูปที่อัปโหลดจะขึ้นในหน้า “กิจกรรม” ของแอปภายในประมาณ 30 วินาที · ผู้ใช้ที่เปิดแอปค้างไว้ก็จะเห็นเอง
-        </p>
+            <div class="admin-list" id="eventList"></div>
+
+            <p class="admin-foot">
+                รูปที่อัปโหลดจะขึ้นในหน้า “กิจกรรม” ของแอปภายในประมาณ 30 วินาที · ผู้ใช้ที่เปิดแอปค้างไว้ก็จะเห็นเอง
+            </p>
+        </div>
+
+        <!-- ══ แท็บ 3 · ข้อความ LINE ══ -->
+        <div class="pane" id="paneLine" hidden>
+            <div class="admin-head">
+                <div class="admin-head-text">
+                    <h1 class="admin-title"><svg class="ic"><use href="#i-chat"/></svg> ข้อความ LINE</h1>
+                    <p class="admin-sub" id="lineSub">เลือกครั้งที่จะประกาศ</p>
+                </div>
+                <button class="btn-ghost btn-sm" id="tplBtn" type="button" title="แก้ข้อความต้นแบบและค่าคงที่">
+                    <svg class="ic"><use href="#i-edit"/></svg> ต้นแบบ
+                </button>
+            </div>
+
+            <label class="field">
+                <span class="field-label">ประกาศครั้งที่</span>
+                <select class="field-input" id="lineRound"></select>
+            </label>
+
+            <p class="warn-box" id="lineWarn" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+
+            <pre class="msg-box" id="lineOut"></pre>
+
+            <div class="msg-actions">
+                <button class="btn-primary" id="lineCopy" type="button"><svg class="ic"><use href="#i-copy"/></svg> คัดลอกข้อความ</button>
+                <button class="btn-ghost" id="lineShare" type="button" hidden><svg class="ic"><use href="#i-share"/></svg> แชร์</button>
+            </div>
+
+            <p class="admin-foot">
+                เวลา 🇬🇧 และ 🇹🇭 คำนวณจากเวลายุโรปของวันนั้นโดยตรง · ช่วงปรับเวลาฤดูหนาว/ฤดูร้อนจะเลื่อนให้เอง
+            </p>
+        </div>
     </section>
 </main>
 
@@ -197,9 +273,125 @@
     </div>
 </dialog>
 
+<!-- ─── แก้แถวในตารางสวดมนต์ (บันทึกลง Google Sheets) ─── -->
+<dialog class="sheet-modal" id="rowModal">
+    <form class="modal-card edit-card" id="rowForm" method="dialog">
+        <div class="modal-head">
+            <h2 id="rowTitle">แก้ข้อมูลคิวสวดมนต์</h2>
+            <button class="icon-btn" type="button" id="rowClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+        </div>
+
+        <div class="field-row">
+            <label class="field">
+                <span class="field-label">ลำดับ</span>
+                <input class="field-input" id="rNo" type="text" readonly>
+            </label>
+            <label class="field">
+                <span class="field-label">ครั้งที่</span>
+                <input class="field-input" id="rRound" type="text" readonly>
+            </label>
+        </div>
+
+        <label class="field">
+            <span class="field-label">วัดที่นำสวดมนต์</span>
+            <input class="field-input" id="rTemple" type="text" maxlength="120">
+        </label>
+
+        <div class="field-row">
+            <label class="field">
+                <span class="field-label">วันที่</span>
+                <input class="field-input" id="rDate" type="date">
+            </label>
+            <label class="field">
+                <span class="field-label">ประเทศ <em>(ไม่ลงชีต)</em></span>
+                <input class="field-input" id="rCountry" type="text" maxlength="60" placeholder="เช่น ประเทศเยอรมนี" list="countryList">
+            </label>
+        </div>
+        <datalist id="countryList"></datalist>
+
+        <label class="field">
+            <span class="field-label">ชื่อ-ฉายา พระอาจารย์</span>
+            <input class="field-input" id="rMonk" type="text" maxlength="160" placeholder="เช่น พระมหาชลิตนพณัฐ ปภาสชโย">
+        </label>
+
+        <label class="field">
+            <span class="field-label">หัวข้อเทศน์</span>
+            <textarea class="field-input field-textarea" id="rTopic" rows="2" maxlength="300"></textarea>
+        </label>
+
+        <label class="field">
+            <span class="field-label">ยอดผู้ร่วมซูม (ไม่บังคับ)</span>
+            <input class="field-input" id="rJoin" type="number" inputmode="numeric" min="0" placeholder="กรอกหลังจบงาน">
+        </label>
+
+        <p class="field-error" id="rowError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" id="rowCancel">ยกเลิก</button>
+            <button class="btn-primary" type="submit" id="rowSave"><svg class="ic"><use href="#i-save"/></svg> บันทึกลงชีต</button>
+        </div>
+    </form>
+</dialog>
+
+<!-- ─── แก้ข้อความต้นแบบ + ค่าคงที่ของข้อความ ─── -->
+<dialog class="sheet-modal" id="tplModal">
+    <form class="modal-card edit-card" id="tplForm" method="dialog">
+        <div class="modal-head">
+            <h2>ข้อความต้นแบบ</h2>
+            <button class="icon-btn" type="button" id="tplClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+        </div>
+
+        <div class="field-row">
+            <label class="field">
+                <span class="field-label">เวลาเริ่ม (ยุโรปกลาง)</span>
+                <input class="field-input" id="tStart" type="time">
+            </label>
+            <label class="field">
+                <span class="field-label">เวลาเลิก (ยุโรปกลาง)</span>
+                <input class="field-input" id="tEnd" type="time">
+            </label>
+        </div>
+
+        <div class="field-row">
+            <label class="field">
+                <span class="field-label">Meeting ID</span>
+                <input class="field-input" id="tMeeting" type="text" inputmode="numeric" placeholder="356 225 8816">
+            </label>
+            <label class="field">
+                <span class="field-label">Passcode</span>
+                <input class="field-input" id="tPass" type="text" placeholder="072">
+            </label>
+        </div>
+
+        <label class="field">
+            <span class="field-label">ลิงก์ Zoom ที่ใส่ในข้อความ</span>
+            <input class="field-input" id="tLink" type="url" placeholder="https://us06web.zoom.us/my/…">
+        </label>
+
+        <label class="field">
+            <span class="field-label">ข้อความต้นแบบ</span>
+            <textarea class="field-input field-textarea mono" id="tBody" rows="16" spellcheck="false"></textarea>
+        </label>
+
+        <ul class="modal-notes tpl-keys">
+            <li><code>{{season}}</code> ซีซั่น · <code>{{round}}</code> ครั้งที่ · <code>{{date_full}}</code> วันที่เต็ม</li>
+            <li><code>{{temple}}</code> วัด · <code>{{country}}</code> ประเทศ · <code>{{monk}}</code> พระอาจารย์ · <code>{{topic}}</code> หัวข้อ</li>
+            <li><code>{{time_eu}}</code> 🇪🇺 · <code>{{time_gb}}</code> 🇬🇧 · <code>{{time_th}}</code> 🇹🇭</li>
+            <li><code>{{meeting_id}}</code> · <code>{{passcode}}</code> · <code>{{zoom_link}}</code></li>
+        </ul>
+
+        <p class="field-error" id="tplError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" id="tplReset">คืนค่าเริ่มต้น</button>
+            <button class="btn-primary" type="submit" id="tplSave"><svg class="ic"><use href="#i-check"/></svg> บันทึก</button>
+        </div>
+    </form>
+</dialog>
+
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=26"></script>
+<script src="admin.js?v=27"></script>
 </body>
 </html>
