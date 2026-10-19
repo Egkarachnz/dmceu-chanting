@@ -299,7 +299,13 @@ $('#reportBtn').addEventListener('click', async () => {
         $('#reportImg').src = reportUrl;
         $('#reportSave').href = reportUrl;
         $('#reportSave').setAttribute('download', name);
-        $('#reportShare').hidden = !(navigator.canShare && navigator.canShare({ files: [reportFile] }));
+        // มือถือ: ปุ่มหลักคือแผ่นแชร์ (มี "บันทึกรูปภาพ" ลงอัลบั้ม) ส่วนดาวน์โหลดไฟล์ถอยไปเป็นปุ่มรอง
+        // เพราะ iOS เปิดไฟล์ที่ดาวน์โหลดด้วยหน้าดูไฟล์ ซึ่งไม่แสดงรูปและไม่ลงอัลบั้ม
+        const canShare = !!(navigator.canShare && navigator.canShare({ files: [reportFile] }));
+        $('#reportShare').hidden = !canShare;
+        $('#reportSave').className = canShare ? 'btn-ghost' : 'btn-primary';
+        $('#reportSave').lastChild.textContent = canShare ? ' ดาวน์โหลด' : ' บันทึกเป็นไฟล์รูป';
+        $('#reportHint').hidden = !canShare;
         reportModal.showModal();
     } catch (err) {
         toast('สร้างรูปไม่สำเร็จ: ' + ((err && err.message) || err));

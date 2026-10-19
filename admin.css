@@ -391,3 +391,5 @@ input:-webkit-autofill:focus {
     box-shadow: 0 0 0 1000px var(--surface-2) inset;
     transition: background-color 9999s ease-out 0s;
 }
+.report-hint { text-align: center; margin: 2px 0 0; word-break: normal; }
+.modal-actions a.btn-ghost { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
