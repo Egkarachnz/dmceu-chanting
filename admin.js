@@ -86,6 +86,140 @@ document.addEventListener('visibilitychange', async () => {
     } catch (e) { /* ออฟไลน์อยู่ ไว้ค่อยเช็กรอบหน้า */ }
 });
 
+/* ─── รีพอร์ตวัดที่ยังไม่มีข้อมูล (วาดเป็นรูป PNG) ───
+   "ยังไม่มีข้อมูล" = คิวที่ช่องพระอาจารย์ หรือ หัวข้อเทศน์ ยังว่างในชีต
+   วาดด้วย canvas เองเพื่อได้รูปเดียวกันทุกเครื่อง ไม่ต้องพึ่งไลบรารี */
+const reportModal = $('#reportModal');
+let reportUrl = null, reportFile = null;
+
+function rrect(ctx, x, y, w, h, r) {
+    ctx.beginPath();
+    ctx.moveTo(x + r, y);
+    ctx.arcTo(x + w, y, x + w, y + h, r);
+    ctx.arcTo(x + w, y + h, x, y + h, r);
+    ctx.arcTo(x, y + h, x, y, r);
+    ctx.arcTo(x, y, x + w, y, r);
+    ctx.closePath();
+}
+
+async function buildReportBlob() {
+    try { await Promise.all([300, 400, 500, 600].map(w => document.fonts.load(`${w} 24px Kanit`, 'ก'))); } catch (e) {}
+    const FONT = "Kanit, 'Sukhumvit Set', Thonburi, sans-serif";
+    const today = startOfToday();
+    const missing = sched.filter(isTodo);
+    const done = sched.length - missing.length;
+    const pct = sched.length ? done / sched.length : 0;
+
+    const W = 1080, PAD = 56, ROW = 74, HEAD = 360, FOOT = 110;
+    const H = HEAD + Math.max(missing.length, 1) * ROW + 70 + FOOT;
+    const scale = 2;
+    const cv = document.createElement('canvas');
+    cv.width = W * scale; cv.height = H * scale;
+    const c = cv.getContext('2d');
+    c.scale(scale, scale);
+    c.textBaseline = 'alphabetic';
+
+    // พื้นหลัง
+    c.fillStyle = '#f3f5fb'; c.fillRect(0, 0, W, H);
+    // หัว
+    const g = c.createLinearGradient(0, 0, W, HEAD);
+    g.addColorStop(0, '#141a33'); g.addColorStop(1, '#2a3765');
+    c.fillStyle = g; c.fillRect(0, 0, W, HEAD - 40);
+
+    c.fillStyle = '#ffffff'; c.font = `600 50px ${FONT}`;
+    c.fillText('วัดที่ยังไม่มีข้อมูลในระบบ', PAD, 100);
+    c.fillStyle = 'rgba(255,255,255,.72)'; c.font = `400 28px ${FONT}`;
+    c.fillText(`ตารางวัดนำสวดมนต์ ${SEASON_CODE} · บ้านกัลยาณมิตรทวีปยุโรป`, PAD, 150);
+    c.fillText(`ข้อมูล ณ ${thaiDateFull(today)}`, PAD, 192);
+
+    // การ์ดสรุป 3 ใบ
+    const cards = [
+        ['วัดทั้งหมด', String(sched.length), '#3b6ef6'],
+        ['มีข้อมูลครบ', String(done), '#16a34a'],
+        ['ยังไม่มีข้อมูล', String(missing.length), '#dc2626']
+    ];
+    const cw = (W - PAD * 2 - 40) / 3;
+    cards.forEach((k, i) => {
+        const x = PAD + i * (cw + 20), y = 232;
+        c.save(); c.shadowColor = 'rgba(20,26,51,.14)'; c.shadowBlur = 18; c.shadowOffsetY = 6;
+        rrect(c, x, y, cw, 118, 22); c.fillStyle = '#ffffff'; c.fill(); c.restore();
+        c.fillStyle = k[2]; c.font = `600 56px ${FONT}`; c.fillText(k[1], x + 26, y + 70);
+        c.fillStyle = '#5b6483'; c.font = `400 24px ${FONT}`; c.fillText(k[0], x + 26, y + 102);
+    });
+
+    // แถบความคืบหน้า
+    let y = HEAD + 6;
+    c.fillStyle = '#161d38'; c.font = `500 28px ${FONT}`;
+    c.fillText(`กรอกแล้ว ${Math.round(pct * 100)}%`, PAD, y + 20);
+    rrect(c, PAD, y + 36, W - PAD * 2, 16, 8); c.fillStyle = '#dde2f0'; c.fill();
+    if (pct > 0) { rrect(c, PAD, y + 36, Math.max(16, (W - PAD * 2) * pct), 16, 8); c.fillStyle = '#16a34a'; c.fill(); }
+    y += 84;
+
+    if (!missing.length) {
+        c.fillStyle = '#16a34a'; c.font = `600 40px ${FONT}`; c.textAlign = 'center';
+        c.fillText('กรอกครบทุกวัดแล้ว', W / 2, y + 60); c.textAlign = 'left';
+    }
+
+    // ตาราง
+    missing.forEach((r, i) => {
+        const top = y + i * ROW;
+        rrect(c, PAD, top, W - PAD * 2, ROW - 10, 18);
+        c.fillStyle = '#ffffff'; c.fill();
+        c.strokeStyle = '#e3e7f3'; c.lineWidth = 1.5; c.stroke();
+
+        c.fillStyle = '#eef1fb'; rrect(c, PAD + 14, top + 12, 54, 42, 12); c.fill();
+        c.fillStyle = '#3b6ef6'; c.font = `600 24px ${FONT}`; c.textAlign = 'center';
+        c.fillText(String(i + 1), PAD + 41, top + 42); c.textAlign = 'left';
+
+        c.fillStyle = '#161d38'; c.font = `500 28px ${FONT}`;
+        c.fillText((r.temple || '').replace(/​/g, ''), PAD + 86, top + 44);
+
+        const late = r.date && r.date < today;
+        c.textAlign = 'right';
+        c.fillStyle = late ? '#dc2626' : '#5b6483'; c.font = `400 25px ${FONT}`;
+        c.fillText(`ครั้งที่ ${r.round} · ${r.date ? thaiDateShort(r.date) + ' ' + (r.date.getFullYear() + 543) : ''}${late ? ' · เลยกำหนด' : ''}`,
+                   W - PAD - 24, top + 43);
+        c.textAlign = 'left';
+    });
+
+    // ท้ายรูป
+    const fy = H - FOOT + 40;
+    c.fillStyle = '#8a92ad'; c.font = `300 22px ${FONT}`; c.textAlign = 'center';
+    c.fillText('ยังไม่มีข้อมูล = ช่องพระอาจารย์หรือหัวข้อเทศน์ในชีตยังว่าง', W / 2, fy);
+    c.fillText('DMCEU · หลังบ้านทีมงาน', W / 2, fy + 34);
+    c.textAlign = 'left';
+
+    return new Promise(res => cv.toBlob(res, 'image/png'));
+}
+
+$('#reportBtn').addEventListener('click', async () => {
+    if (!sched.length) return toast('ยังไม่ได้โหลดตาราง · กดโหลดใหม่ก่อน');
+    const btn = $('#reportBtn');
+    btn.classList.add('busy');
+    try {
+        const blob = await buildReportBlob();
+        if (reportUrl) URL.revokeObjectURL(reportUrl);
+        reportUrl = URL.createObjectURL(blob);
+        const name = `รีพอร์ตวัดที่ยังไม่มีข้อมูล-${ymd(startOfToday())}.png`;
+        // เตรียมไฟล์ไว้ก่อน เพราะ iOS ให้เรียกแชร์ได้เฉพาะตอนแตะ (await ก่อนแชร์ = แชร์ไม่ขึ้น)
+        reportFile = new File([blob], name, { type: 'image/png' });
+        $('#reportImg').src = reportUrl;
+        $('#reportSave').href = reportUrl;
+        $('#reportSave').setAttribute('download', name);
+        $('#reportShare').hidden = !(navigator.canShare && navigator.canShare({ files: [reportFile] }));
+        reportModal.showModal();
+    } catch (err) {
+        toast('สร้างรูปไม่สำเร็จ: ' + ((err && err.message) || err));
+    } finally {
+        btn.classList.remove('busy');
+    }
+});
+$('#reportClose').addEventListener('click', () => reportModal.close());
+$('#reportShare').addEventListener('click', () => {
+    if (!reportFile) return;
+    navigator.share({ files: [reportFile] }).catch(() => {});
+});
+
 /* ─── ปุ่มลืมตาดูรหัสผ่าน (ใช้ร่วมกันทุกช่องรหัสผ่าน) ───
    บนมือถือพิมพ์รหัสยาว ๆ แล้วไม่เห็นว่าพิมพ์อะไรไป จึงให้กดดูได้ */
 function resetEyes(scope) {

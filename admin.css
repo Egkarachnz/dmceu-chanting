@@ -358,3 +358,8 @@ body.admin-page { padding-bottom: calc(var(--sat-bottom) + 40px); }
     font-size: 11px; padding: 1px 5px; border-radius: 5px;
     background: var(--surface-3); color: var(--text-sec);
 }
+
+/* ─── รีพอร์ตเป็นรูป ─── */
+.head-actions { display: flex; gap: 8px; flex: none; }
+.report-img { width: 100%; height: auto; max-height: 60vh; object-fit: contain; border-radius: 12px; border: 1px solid var(--line, rgba(0,0,0,.08)); background: #fff; }
+a.btn-primary { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }

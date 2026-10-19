@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=33">
-<link rel="stylesheet" href="admin.css?v=33">
+<link rel="stylesheet" href="styles.css?v=34">
+<link rel="stylesheet" href="admin.css?v=34">
 
 <script>
 (function () {
@@ -142,9 +142,14 @@
                     <h1 class="admin-title"><svg class="ic"><use href="#i-table"/></svg> ตารางสวดมนต์</h1>
                     <p class="admin-sub" id="schedSub">กำลังโหลด…</p>
                 </div>
-                <button class="btn-ghost btn-sm" id="schedReload" type="button" title="โหลดจากชีตใหม่">
-                    <svg class="ic"><use href="#i-refresh"/></svg> โหลดใหม่
-                </button>
+                <div class="head-actions">
+                    <button class="btn-ghost btn-sm" id="reportBtn" type="button" title="สร้างรูปรายงานวัดที่ยังไม่มีข้อมูล">
+                        <svg class="ic"><use href="#i-image"/></svg> รีพอร์ต
+                    </button>
+                    <button class="btn-ghost btn-sm" id="schedReload" type="button" title="โหลดจากชีตใหม่">
+                        <svg class="ic"><use href="#i-refresh"/></svg> โหลดใหม่
+                    </button>
+                </div>
             </div>
 
             <div class="seg" id="schedFilter">
@@ -345,6 +350,21 @@
 </dialog>
 
 <!-- ─── แก้ข้อความต้นแบบ + ค่าคงที่ของข้อความ ─── -->
+<!-- ─── รีพอร์ตวัดที่ยังไม่มีข้อมูล (สร้างเป็นรูป) ─── -->
+<dialog class="sheet-modal" id="reportModal">
+    <div class="modal-card edit-card">
+        <div class="modal-head">
+            <h2>รีพอร์ตวัดที่ยังไม่มีข้อมูล</h2>
+            <button class="icon-btn" type="button" id="reportClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+        </div>
+        <img id="reportImg" class="report-img" alt="รีพอร์ตวัดที่ยังไม่มีข้อมูล">
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" id="reportShare" hidden><svg class="ic"><use href="#i-share"/></svg> แชร์</button>
+            <a class="btn-primary" id="reportSave" download="รีพอร์ตวัดที่ยังไม่มีข้อมูล.png"><svg class="ic"><use href="#i-save"/></svg> บันทึกเป็นรูป</a>
+        </div>
+    </div>
+</dialog>
+
 <!-- ─── เปลี่ยนรหัสผ่าน ─── -->
 <dialog class="sheet-modal" id="pwModal">
     <form class="modal-card edit-card" id="pwForm" method="dialog">
@@ -449,6 +469,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=33"></script>
+<script src="admin.js?v=34"></script>
 </body>
 </html>
