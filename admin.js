@@ -102,16 +102,69 @@ function rrect(ctx, x, y, w, h, r) {
     ctx.closePath();
 }
 
+/* ไอคอนวาดด้วยเส้นเอง (ไม่ใช้อีโมจิ เพราะหน้าตาต่างกันไปตามเครื่อง) — กล่อง s×s ที่ตำแหน่ง x,y */
+const RPT_ICON = {
+    calendar(c, x, y, s, col) {
+        c.save(); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = s * 0.075; c.lineCap = 'round';
+        rrect(c, x + s * .1, y + s * .18, s * .8, s * .72, s * .14); c.stroke();
+        c.beginPath(); c.moveTo(x + s * .1, y + s * .42); c.lineTo(x + s * .9, y + s * .42); c.stroke();
+        c.beginPath(); c.moveTo(x + s * .32, y + s * .07); c.lineTo(x + s * .32, y + s * .29);
+        c.moveTo(x + s * .68, y + s * .07); c.lineTo(x + s * .68, y + s * .29); c.stroke();
+        [[.3, .58], [.5, .58], [.7, .58], [.3, .74], [.5, .74]].forEach(d => {
+            c.beginPath(); c.arc(x + s * d[0], y + s * d[1], s * .042, 0, 7); c.fill();
+        });
+        c.restore();
+    },
+    temple(c, x, y, s, col) {
+        c.save(); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = s * 0.075; c.lineCap = 'round'; c.lineJoin = 'round';
+        c.beginPath(); c.moveTo(x + s * .5, y + s * .06); c.lineTo(x + s * .5, y + s * .2); c.stroke();      // ยอด
+        c.beginPath(); c.moveTo(x + s * .5, y + s * .2); c.lineTo(x + s * .92, y + s * .5);
+        c.lineTo(x + s * .08, y + s * .5); c.closePath(); c.fill();                                           // หลังคา
+        c.beginPath(); c.moveTo(x + s * .22, y + s * .56); c.lineTo(x + s * .22, y + s * .82);
+        c.moveTo(x + s * .5, y + s * .56); c.lineTo(x + s * .5, y + s * .82);
+        c.moveTo(x + s * .78, y + s * .56); c.lineTo(x + s * .78, y + s * .82); c.stroke();                  // เสา
+        c.fillRect(x + s * .08, y + s * .84, s * .84, s * .08);                                               // ฐาน
+        c.restore();
+    },
+    check(c, x, y, s, col) {
+        c.save(); c.strokeStyle = col; c.lineWidth = s * 0.08; c.lineCap = 'round'; c.lineJoin = 'round';
+        c.beginPath(); c.arc(x + s / 2, y + s / 2, s * .4, 0, 7); c.stroke();
+        c.beginPath(); c.moveTo(x + s * .3, y + s * .52); c.lineTo(x + s * .45, y + s * .66); c.lineTo(x + s * .71, y + s * .38); c.stroke();
+        c.restore();
+    },
+    alert(c, x, y, s, col) {
+        c.save(); c.strokeStyle = col; c.fillStyle = col; c.lineWidth = s * 0.08; c.lineCap = 'round';
+        c.beginPath(); c.arc(x + s / 2, y + s / 2, s * .4, 0, 7); c.stroke();
+        c.beginPath(); c.moveTo(x + s / 2, y + s * .3); c.lineTo(x + s / 2, y + s * .56); c.stroke();
+        c.beginPath(); c.arc(x + s / 2, y + s * .7, s * .05, 0, 7); c.fill();
+        c.restore();
+    }
+};
+
 async function buildReportBlob() {
     try { await Promise.all([300, 400, 500, 600].map(w => document.fonts.load(`${w} 24px Kanit`, 'ก'))); } catch (e) {}
     const FONT = "Kanit, 'Sukhumvit Set', Thonburi, sans-serif";
     const today = startOfToday();
-    const missing = sched.filter(isTodo);
+    const missing = sched.filter(isTodo).sort((a, b) => (a.date || 0) - (b.date || 0));
     const done = sched.length - missing.length;
     const pct = sched.length ? done / sched.length : 0;
 
-    const W = 1080, PAD = 56, ROW = 74, HEAD = 360, FOOT = 110;
-    const H = HEAD + Math.max(missing.length, 1) * ROW + 70 + FOOT;
+    // จัดกลุ่มตามเดือน (เรียงตามวันที่อยู่แล้ว) · ไม่มีวันที่ไปรวมกลุ่มท้ายสุด
+    const groups = [];
+    missing.forEach(r => {
+        const key = r.date ? `${r.date.getFullYear()}-${r.date.getMonth()}` : 'none';
+        let gp = groups[groups.length - 1];
+        if (!gp || gp.key !== key) {
+            gp = { key, label: r.date ? `${thaiMonthsFull[r.date.getMonth()]} ${r.date.getFullYear() + 543}` : 'ยังไม่ระบุวันที่', rows: [] };
+            groups.push(gp);
+        }
+        gp.rows.push(r);
+    });
+    const ACCENTS = ['#3b6ef6', '#7c3aed', '#0891b2', '#d97706', '#db2777', '#16a34a'];
+
+    const W = 1080, PAD = 56, ROW = 78, GH = 92, GGAP = 30, HEAD = 360, FOOT = 120;
+    const body = groups.reduce((h, gp) => h + GH + gp.rows.length * ROW + GGAP, 0) || 120;
+    const H = HEAD + 84 + body + FOOT;
     const scale = 2;
     const cv = document.createElement('canvas');
     cv.width = W * scale; cv.height = H * scale;
@@ -119,24 +172,24 @@ async function buildReportBlob() {
     c.scale(scale, scale);
     c.textBaseline = 'alphabetic';
 
-    // พื้นหลัง
+    // พื้นหลัง + หัว
     c.fillStyle = '#f3f5fb'; c.fillRect(0, 0, W, H);
-    // หัว
     const g = c.createLinearGradient(0, 0, W, HEAD);
     g.addColorStop(0, '#141a33'); g.addColorStop(1, '#2a3765');
     c.fillStyle = g; c.fillRect(0, 0, W, HEAD - 40);
-
+    RPT_ICON.temple(c, PAD, 52, 64, '#f5c451');
     c.fillStyle = '#ffffff'; c.font = `600 50px ${FONT}`;
-    c.fillText('วัดที่ยังไม่มีข้อมูลในระบบ', PAD, 100);
+    c.fillText('วัดที่ยังไม่มีข้อมูลในระบบ', PAD + 84, 100);
     c.fillStyle = 'rgba(255,255,255,.72)'; c.font = `400 28px ${FONT}`;
-    c.fillText(`ตารางวัดนำสวดมนต์ ${SEASON_CODE} · บ้านกัลยาณมิตรทวีปยุโรป`, PAD, 150);
-    c.fillText(`ข้อมูล ณ ${thaiDateFull(today)}`, PAD, 192);
+    c.fillText(`ตารางวัดนำสวดมนต์ ${SEASON_CODE} · บ้านกัลยาณมิตรทวีปยุโรป`, PAD, 156);
+    RPT_ICON.calendar(c, PAD, 172, 30, 'rgba(255,255,255,.72)');
+    c.fillText(`ข้อมูล ณ ${thaiDateFull(today)}`, PAD + 42, 198);
 
-    // การ์ดสรุป 3 ใบ
+    // การ์ดสรุป 3 ใบ พร้อมไอคอน
     const cards = [
-        ['วัดทั้งหมด', String(sched.length), '#3b6ef6'],
-        ['มีข้อมูลครบ', String(done), '#16a34a'],
-        ['ยังไม่มีข้อมูล', String(missing.length), '#dc2626']
+        ['วัดทั้งหมด', String(sched.length), '#3b6ef6', 'temple'],
+        ['มีข้อมูลครบ', String(done), '#16a34a', 'check'],
+        ['ยังไม่มีข้อมูล', String(missing.length), '#dc2626', 'alert']
     ];
     const cw = (W - PAD * 2 - 40) / 3;
     cards.forEach((k, i) => {
@@ -145,6 +198,7 @@ async function buildReportBlob() {
         rrect(c, x, y, cw, 118, 22); c.fillStyle = '#ffffff'; c.fill(); c.restore();
         c.fillStyle = k[2]; c.font = `600 56px ${FONT}`; c.fillText(k[1], x + 26, y + 70);
         c.fillStyle = '#5b6483'; c.font = `400 24px ${FONT}`; c.fillText(k[0], x + 26, y + 102);
+        RPT_ICON[k[3]](c, x + cw - 26 - 44, y + 22, 44, k[2]);
     });
 
     // แถบความคืบหน้า
@@ -153,40 +207,69 @@ async function buildReportBlob() {
     c.fillText(`กรอกแล้ว ${Math.round(pct * 100)}%`, PAD, y + 20);
     rrect(c, PAD, y + 36, W - PAD * 2, 16, 8); c.fillStyle = '#dde2f0'; c.fill();
     if (pct > 0) { rrect(c, PAD, y + 36, Math.max(16, (W - PAD * 2) * pct), 16, 8); c.fillStyle = '#16a34a'; c.fill(); }
-    y += 84;
+    y += 96;
 
     if (!missing.length) {
+        RPT_ICON.check(c, W / 2 - 40, y + 10, 80, '#16a34a');
         c.fillStyle = '#16a34a'; c.font = `600 40px ${FONT}`; c.textAlign = 'center';
-        c.fillText('กรอกครบทุกวัดแล้ว', W / 2, y + 60); c.textAlign = 'left';
+        c.fillText('กรอกครบทุกวัดแล้ว', W / 2, y + 140); c.textAlign = 'left';
     }
 
-    // ตาราง
-    missing.forEach((r, i) => {
-        const top = y + i * ROW;
-        rrect(c, PAD, top, W - PAD * 2, ROW - 10, 18);
-        c.fillStyle = '#ffffff'; c.fill();
-        c.strokeStyle = '#e3e7f3'; c.lineWidth = 1.5; c.stroke();
+    // กลุ่มเดือน
+    groups.forEach((gp, gi) => {
+        const col = ACCENTS[gi % ACCENTS.length];
+        // หัวเดือน
+        rrect(c, PAD, y, W - PAD * 2, GH - 14, 22); c.fillStyle = col; c.fill();
+        rrect(c, PAD + 16, y + 12, 52, 52, 14); c.fillStyle = 'rgba(255,255,255,.2)'; c.fill();
+        RPT_ICON.calendar(c, PAD + 24, y + 20, 36, '#ffffff');
+        c.fillStyle = '#ffffff'; c.font = `600 36px ${FONT}`;
+        c.fillText(gp.label, PAD + 86, y + 52);
+        const pill = `${gp.rows.length} วัด`;
+        c.font = `500 25px ${FONT}`;
+        const pw = c.measureText(pill).width + 40;
+        rrect(c, W - PAD - 18 - pw, y + 16, pw, 44, 22); c.fillStyle = 'rgba(255,255,255,.24)'; c.fill();
+        c.fillStyle = '#ffffff'; c.textAlign = 'center';
+        c.fillText(pill, W - PAD - 18 - pw / 2, y + 46); c.textAlign = 'left';
+        y += GH;
 
-        c.fillStyle = '#eef1fb'; rrect(c, PAD + 14, top + 12, 54, 42, 12); c.fill();
-        c.fillStyle = '#3b6ef6'; c.font = `600 24px ${FONT}`; c.textAlign = 'center';
-        c.fillText(String(i + 1), PAD + 41, top + 42); c.textAlign = 'left';
+        gp.rows.forEach(r => {
+            rrect(c, PAD, y, W - PAD * 2, ROW - 10, 18);
+            c.fillStyle = '#ffffff'; c.fill();
+            c.strokeStyle = '#e3e7f3'; c.lineWidth = 1.5; c.stroke();
 
-        c.fillStyle = '#161d38'; c.font = `500 28px ${FONT}`;
-        c.fillText((r.temple || '').replace(/​/g, ''), PAD + 86, top + 44);
+            // ไอคอนวัดในวงกลมสีเดือน
+            c.beginPath(); c.arc(PAD + 44, y + (ROW - 10) / 2, 26, 0, 7); c.fillStyle = col + '1f'; c.fill();
+            RPT_ICON.temple(c, PAD + 44 - 16, y + (ROW - 10) / 2 - 16, 32, col);
 
-        const late = r.date && r.date < today;
-        c.textAlign = 'right';
-        c.fillStyle = late ? '#dc2626' : '#5b6483'; c.font = `400 25px ${FONT}`;
-        c.fillText(`ครั้งที่ ${r.round} · ${r.date ? thaiDateShort(r.date) + ' ' + (r.date.getFullYear() + 543) : ''}${late ? ' · เลยกำหนด' : ''}`,
-                   W - PAD - 24, top + 43);
-        c.textAlign = 'left';
+            c.fillStyle = '#161d38'; c.font = `500 28px ${FONT}`;
+            c.fillText((r.temple || '').replace(/​/g, ''), PAD + 88, y + 45);
+
+            // ขวา: วัน-เดือน + ป้ายครั้งที่
+            const late = r.date && r.date < today;
+            const dayTxt = r.date ? `${thaiDays[r.date.getDay()].replace('วัน', '')} ${r.date.getDate()} ${thaiMonthsAbbr[r.date.getMonth()]}` : '–';
+            c.textAlign = 'right';
+            c.fillStyle = late ? '#dc2626' : '#5b6483'; c.font = `400 25px ${FONT}`;
+            c.fillText(dayTxt + (late ? ' · เลยกำหนด' : ''), W - PAD - 24, y + 44);
+            const dw = c.measureText(dayTxt + (late ? ' · เลยกำหนด' : '')).width;
+            c.textAlign = 'left';
+            const chip = `ครั้งที่ ${r.round}`;
+            c.font = `500 22px ${FONT}`;
+            const cwid = c.measureText(chip).width + 28;
+            const cx = W - PAD - 24 - dw - 16 - cwid;
+            rrect(c, cx, y + 14, cwid, 36, 18); c.fillStyle = col + '1a'; c.fill();
+            c.fillStyle = col; c.textAlign = 'center'; c.fillText(chip, cx + cwid / 2, y + 40); c.textAlign = 'left';
+
+            y += ROW;
+        });
+        y += GGAP;
     });
 
     // ท้ายรูป
-    const fy = H - FOOT + 40;
+    const fy = H - FOOT + 46;
     c.fillStyle = '#8a92ad'; c.font = `300 22px ${FONT}`; c.textAlign = 'center';
     c.fillText('ยังไม่มีข้อมูล = ช่องพระอาจารย์หรือหัวข้อเทศน์ในชีตยังว่าง', W / 2, fy);
-    c.fillText('Dhammakaya Meditation Center Europe · DMCEU', W / 2, fy + 34);
+    c.fillStyle = '#5b6483'; c.font = `500 25px ${FONT}`;
+    c.fillText('ระบบฐานข้อมูล สวดมนต์ทวีปยุโรป ซีซั่นที่ 16', W / 2, fy + 40);
     c.textAlign = 'left';
 
     return new Promise(res => cv.toBlob(res, 'image/png'));
