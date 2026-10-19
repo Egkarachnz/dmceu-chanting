@@ -338,3 +338,23 @@ body.admin-page { padding-bottom: calc(var(--sat-bottom) + 40px); }
     0%, 100% { background: var(--surface); border-color: var(--border); }
     20%      { background: rgba(22,163,74,.16); border-color: var(--green); }
 }
+
+/* ─── ช่องรหัสผ่าน + ปุ่มลืมตา ─── */
+.field-pw { position: relative; display: block; }
+.field-pw .field-input { padding-right: 46px; }
+.field-eye {
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    width: 34px; height: 34px; display: grid; place-items: center;
+    border: 0; background: none; color: var(--text-mute); cursor: pointer;
+    border-radius: 9px; transition: color .15s var(--ease), background .15s var(--ease);
+}
+.field-eye:hover { color: var(--text); background: var(--surface-2); }
+.field-eye .ic { width: 18px; height: 18px; }
+.field-eye .ic-off,
+.field-eye.on .ic-on { display: none; }
+.field-eye.on .ic-off { display: block; }
+.auth-note code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px; padding: 1px 5px; border-radius: 5px;
+    background: var(--surface-3); color: var(--text-sec);
+}

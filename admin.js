@@ -76,6 +76,7 @@ function showAuth(msg) {
     $('#authView').hidden = false;
     $('#appView').hidden = true;
     $('#logoutBtn').hidden = true;
+    $('#pwBtn').hidden = true;
     showError('#loginError', msg || '');
     $('#loginBtn').classList.remove('busy');
 }
@@ -85,6 +86,7 @@ function showApp() {
     $('#appView').hidden = false;
     $('#logoutBtn').hidden = false;
     $('#logoutBtn').title = `ออกจากระบบ (${session.user.email})`;
+    $('#pwBtn').hidden = false;
     let tab = 'schedule';
     try { tab = localStorage.getItem('dmceu.admin.tab') || 'schedule'; } catch (e) {}
     setTab(tab);
@@ -124,6 +126,59 @@ $('#logoutBtn').addEventListener('click', async () => {
     sched = [];
     showAuth();
     toast('ออกจากระบบแล้ว');
+});
+
+/* ─── เปลี่ยนรหัสผ่าน ───
+   ตั้งรหัสใหม่ได้เองในแอป ไม่ต้องพึ่งอีเมลรีเซ็ต (โปรเจกต์นี้ยังไม่ได้ตั้ง SMTP)
+   ถ้าลืมรหัสจนเข้าไม่ได้เลย ให้ตั้งใหม่ที่ Supabase → SQL Editor ตาม docs/reset-password.md */
+const pwModal = $('#pwModal');
+
+$('#pwBtn').addEventListener('click', () => {
+    $('#pwNew').value = '';
+    $('#pwNew2').value = '';
+    $('#pwNew').type = 'password';
+    $('#pwEye').classList.remove('on');
+    $('#pwWho').textContent = session ? `บัญชี ${session.user.email}` : '';
+    showError('#pwError', '');
+    pwModal.showModal();
+    $('#pwNew').focus();
+});
+$('#pwClose').addEventListener('click', () => pwModal.close());
+$('#pwCancel').addEventListener('click', () => pwModal.close());
+$('#pwEye').addEventListener('click', () => {
+    const f = $('#pwNew');
+    const show = f.type === 'password';
+    f.type = show ? 'text' : 'password';
+    $('#pwEye').classList.toggle('on', show);
+    $('#pwEye').setAttribute('aria-label', show ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน');
+});
+
+$('#pwForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    showError('#pwError', '');
+    const pw = $('#pwNew').value;
+    if (pw.length < 8) return showError('#pwError', 'รหัสผ่านต้องยาวอย่างน้อย 8 ตัวอักษร');
+    if (pw !== $('#pwNew2').value) return showError('#pwError', 'รหัสผ่านสองช่องไม่ตรงกัน');
+
+    const btn = $('#pwSave');
+    btn.classList.add('busy');
+    try {
+        const { error } = await db.auth.updateUser({ password: pw });
+        if (error) throw error;
+        $('#pwNew').value = '';
+        $('#pwNew2').value = '';
+        pwModal.close();
+        toast('เปลี่ยนรหัสผ่านแล้ว · ครั้งต่อไปใช้รหัสใหม่');
+    } catch (err) {
+        const m = String((err && err.message) || err);
+        showError('#pwError',
+            /same.*password|should be different/i.test(m) ? 'รหัสใหม่ต้องไม่ซ้ำกับรหัสเดิม'
+          : /weak|pwned|password/i.test(m) && /short|weak|pwned/i.test(m) ? 'รหัสผ่านนี้ไม่ปลอดภัยพอ · ลองยาวขึ้นหรือผสมตัวเลข'
+          : /session|jwt|expired/i.test(m) ? 'หมดเวลาเข้าสู่ระบบ · กรุณาเข้าสู่ระบบใหม่'
+          : 'เปลี่ยนรหัสผ่านไม่สำเร็จ: ' + m);
+    } finally {
+        btn.classList.remove('busy');
+    }
 });
 
 db.auth.onAuthStateChange((event) => {

@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=29">
-<link rel="stylesheet" href="admin.css?v=29">
+<link rel="stylesheet" href="styles.css?v=30">
+<link rel="stylesheet" href="admin.css?v=30">
 
 <script>
 (function () {
@@ -83,6 +83,9 @@
                 <svg class="ic ic-sun"><use href="#i-sun"/></svg>
                 <svg class="ic ic-moon"><use href="#i-moon"/></svg>
             </button>
+            <button class="icon-btn" id="pwBtn" type="button" title="เปลี่ยนรหัสผ่าน" aria-label="เปลี่ยนรหัสผ่าน" hidden>
+                <svg class="ic"><use href="#i-lock"/></svg>
+            </button>
             <button class="icon-btn" id="logoutBtn" type="button" title="ออกจากระบบ" aria-label="ออกจากระบบ" hidden>
                 <svg class="ic"><use href="#i-logout"/></svg>
             </button>
@@ -109,7 +112,7 @@
             <p class="field-error" id="loginError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
             <button class="btn-primary" id="loginBtn" type="submit">เข้าสู่ระบบ</button>
         </form>
-        <p class="auth-note">ลืมรหัสผ่าน? รีเซ็ตได้ใน Supabase → Authentication → Users</p>
+        <p class="auth-note">ลืมรหัสผ่าน? ตั้งใหม่ได้เองที่ Supabase → SQL Editor (ดูขั้นตอนในไฟล์ <code>docs/reset-password.md</code>)<br>เข้าได้แล้วกดรูปกุญแจมุมขวาบนเพื่อเปลี่ยนเป็นรหัสที่จำง่าย</p>
     </section>
 
     <!-- ─── หน้าหลักหลังบ้าน ─── -->
@@ -336,6 +339,46 @@
 </dialog>
 
 <!-- ─── แก้ข้อความต้นแบบ + ค่าคงที่ของข้อความ ─── -->
+<!-- ─── เปลี่ยนรหัสผ่าน ─── -->
+<dialog class="sheet-modal" id="pwModal">
+    <form class="modal-card edit-card" id="pwForm" method="dialog">
+        <div class="modal-head">
+            <h2>เปลี่ยนรหัสผ่าน</h2>
+            <button class="icon-btn" type="button" id="pwClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+        </div>
+
+        <p class="confirm-text" id="pwWho"></p>
+
+        <label class="field">
+            <span class="field-label">รหัสผ่านใหม่</span>
+            <span class="field-pw">
+                <input class="field-input" id="pwNew" type="password" name="new-password" autocomplete="new-password" minlength="8" required placeholder="อย่างน้อย 8 ตัวอักษร">
+                <button class="field-eye" type="button" id="pwEye" aria-label="แสดงรหัสผ่าน">
+                    <svg class="ic ic-on"><use href="#i-eye"/></svg>
+                    <svg class="ic ic-off"><use href="#i-eye-off"/></svg>
+                </button>
+            </span>
+        </label>
+
+        <label class="field">
+            <span class="field-label">พิมพ์รหัสผ่านใหม่อีกครั้ง</span>
+            <input class="field-input" id="pwNew2" type="password" name="confirm-password" autocomplete="new-password" minlength="8" required placeholder="••••••••">
+        </label>
+
+        <ul class="modal-notes">
+            <li>เปลี่ยนแล้วใช้ได้ทันที ไม่ต้องยืนยันทางอีเมล</li>
+            <li>เครื่องอื่นที่ค้างล็อกอินไว้จะยังใช้ได้ จนกว่าจะกดออกจากระบบ</li>
+        </ul>
+
+        <p class="field-error" id="pwError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" id="pwCancel">ยกเลิก</button>
+            <button class="btn-primary" type="submit" id="pwSave"><svg class="ic"><use href="#i-check"/></svg> บันทึกรหัสใหม่</button>
+        </div>
+    </form>
+</dialog>
+
 <dialog class="sheet-modal" id="tplModal">
     <form class="modal-card edit-card" id="tplForm" method="dialog">
         <div class="modal-head">
@@ -394,6 +437,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=29"></script>
+<script src="admin.js?v=30"></script>
 </body>
 </html>
