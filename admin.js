@@ -714,20 +714,33 @@ $('#rowClose').addEventListener('click', () => rowModal.close());
 $('#rowCancel').addEventListener('click', () => rowModal.close());
 rowModal.addEventListener('close', () => { editingRow = null; });
 
-/** เรียก Edge Function (ตรวจสิทธิ์แล้วส่งต่อไป Apps Script → ชีต) */
+/** เรียก Edge Function (ตรวจสิทธิ์แล้วส่งต่อไป Apps Script → ชีต)
+    เขียนผ่าน Google ใช้เวลาประมาณ 3-5 วินาทีเป็นปกติ จึงให้เวลาถึง 45 วินาที
+    และแปลง error ของเบราว์เซอร์ ("Load failed" / "Failed to fetch") เป็นข้อความที่อ่านรู้เรื่อง */
 async function sheetWrite(payload) {
     const { data: s } = await db.auth.getSession();
     if (!s.session) throw new Error('หมดเวลาเข้าสู่ระบบ · กรุณาเข้าสู่ระบบใหม่');
     session = s.session;
-    const res = await fetch(WRITE_FN, {
-        method: 'POST',
-        headers: {
-            apikey: SUPA.key,
-            Authorization: 'Bearer ' + session.access_token,
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-    });
+
+    let res;
+    try {
+        res = await fetch(WRITE_FN, {
+            method: 'POST',
+            headers: {
+                apikey: SUPA.key,
+                Authorization: 'Bearer ' + session.access_token,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload),
+            signal: AbortSignal.timeout(45000)
+        });
+    } catch (e) {
+        if (e && (e.name === 'TimeoutError' || e.name === 'AbortError')) {
+            throw new Error('เซิร์ฟเวอร์ไม่ตอบกลับใน 45 วินาที · ลองใหม่อีกครั้ง (ข้อมูลอาจยังไม่ถูกบันทึก)');
+        }
+        throw new Error('ติดต่อเซิร์ฟเวอร์ไม่ได้ · ตรวจสัญญาณอินเทอร์เน็ตแล้วลองใหม่');
+    }
+
     let out = {};
     try { out = await res.json(); } catch (e) { throw new Error('เซิร์ฟเวอร์ตอบกลับผิดรูปแบบ (HTTP ' + res.status + ')'); }
     if (!res.ok || out.ok === false) throw new Error(out.error || 'บันทึกไม่สำเร็จ (HTTP ' + res.status + ')');
@@ -739,7 +752,9 @@ $('#rowForm').addEventListener('submit', async e => {
     if (!editingRow) return;
     showError('#rowError', '');
     const btn = $('#rowSave');
+    const label = btn.innerHTML;
     btn.classList.add('busy');
+    btn.innerHTML = icon('refresh') + ' กำลังบันทึกลงชีต…';
     const r = editingRow;
     const country = $('#rCountry').value.trim();
     const temple = $('#rTemple').value.trim();
@@ -762,6 +777,7 @@ $('#rowForm').addEventListener('submit', async e => {
         showError('#rowError', err.message || 'บันทึกไม่สำเร็จ');
     } finally {
         btn.classList.remove('busy');
+        btn.innerHTML = label;
     }
 });
 
