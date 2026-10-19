@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=39">
-<link rel="stylesheet" href="admin.css?v=39">
+<link rel="stylesheet" href="styles.css?v=40">
+<link rel="stylesheet" href="admin.css?v=40">
 
 <script>
 (function () {
@@ -100,15 +100,15 @@
         <div class="auth-icon"><svg class="ic"><use href="#i-lock"/></svg></div>
         <h1 class="auth-title">เข้าสู่ระบบทีมงาน</h1>
         <p class="auth-sub">เฉพาะอีเมลที่ได้รับสิทธิ์แอดมินเท่านั้น</p>
-        <form id="loginForm" class="auth-form" autocomplete="on">
+        <form id="loginForm" class="auth-form" method="post" action="#" autocomplete="on">
             <label class="field">
                 <span class="field-label">อีเมล</span>
-                <input class="field-input" id="loginEmail" type="email" name="email" autocomplete="username" inputmode="email" autocapitalize="off" spellcheck="false" required placeholder="you@example.com">
+                <input class="field-input" id="loginEmail" type="email" name="username" autocomplete="username" inputmode="email" enterkeyhint="next" autocapitalize="off" autocorrect="off" spellcheck="false" required placeholder="you@example.com">
             </label>
             <label class="field">
                 <span class="field-label">รหัสผ่าน</span>
                 <span class="field-pw">
-                    <input class="field-input" id="loginPass" type="password" name="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" required placeholder="••••••••">
+                    <input class="field-input" id="loginPass" type="password" name="password" autocomplete="current-password" enterkeyhint="go" required placeholder="••••••••">
                     <button class="field-eye" type="button" aria-label="แสดงรหัสผ่าน">
                         <svg class="ic ic-on"><use href="#i-eye"/></svg>
                         <svg class="ic ic-off"><use href="#i-eye-off"/></svg>
@@ -469,6 +469,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=39"></script>
+<script src="admin.js?v=40"></script>
 </body>
 </html>
