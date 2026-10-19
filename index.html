@@ -24,7 +24,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=32">
+<link rel="stylesheet" href="styles.css?v=33">
 
 <script>
 // Theme boot (before paint) — light | dark | auto
@@ -207,7 +207,7 @@
 
 <!-- ─── FOOTER ─── -->
 <footer class="site-footer">
-    <img src="assets/logo-mark.png" alt="DMCEU" class="footer-mark" id="adminKnock" width="72" height="72">
+    <img src="assets/logo-mark.png" alt="DMCEU" class="footer-mark" width="72" height="72">
     <p>ข้อมูลเรียลไทม์ · พัฒนาโดย <span>ทีมงาน dmceu</span></p>
     <div class="site-stats" id="siteStats" hidden>
         <span class="site-stat" title="จำนวนการเข้าชมทั้งหมด (นับเครื่องละ 1 ครั้งต่อวัน)">
@@ -216,19 +216,6 @@
         <span class="site-stat online" title="กำลังเปิดหน้านี้อยู่ตอนนี้">
             <i class="live-dot"></i> ออนไลน์ <b id="stat-online">–</b> คน
         </span>
-    </div>
-    <div class="admin-tools" id="adminTools" hidden>
-        <span class="admin-badge"><svg class="ic"><use href="#i-lock"/></svg> โหมดแอดมิน</span>
-        <button class="footer-link" id="sourceBtn" type="button">
-            <svg class="ic"><use href="#i-sheet"/></svg> ตั้งค่าแหล่งข้อมูล
-        </button>
-        <button class="footer-link" id="liveBtn" type="button">
-            <svg class="ic"><use href="#i-video"/></svg> ตั้งค่า Live / Zoom
-        </button>
-        <a class="footer-link" href="admin.html">
-            <svg class="ic"><use href="#i-event"/></svg> หลังบ้าน · อัปโหลดรูปกิจกรรม
-        </a>
-        <button class="footer-link" id="adminLogout" type="button">ออกจากโหมดแอดมิน</button>
     </div>
     <p class="copy">&copy; 2026 Dhammakaya Meditation Center Europe</p>
 </footer>
@@ -257,133 +244,6 @@
     <button class="img-nav next" id="imgNext" type="button" aria-label="รูปถัดไป" hidden>
         <svg class="ic"><use href="#i-chev-right"/></svg>
     </button>
-</dialog>
-
-<!-- ─── ADMIN UNLOCK ─── -->
-<dialog class="sheet-modal" id="adminModal">
-    <form method="dialog" class="modal-card">
-        <div class="modal-head">
-            <h2>เข้าสู่โหมดแอดมิน</h2>
-            <button class="icon-btn ghost" id="adminClose" type="button" aria-label="ปิด">
-                <svg class="ic"><use href="#i-close"/></svg>
-            </button>
-        </div>
-        <label class="field">
-            <span class="field-label">รหัสผ่านทีมงาน</span>
-            <input type="password" id="adminInput" class="field-input" autocomplete="current-password"
-                   placeholder="••••••••">
-        </label>
-        <p class="field-error" id="adminError" hidden></p>
-        <p class="field-hint">สำหรับทีมงานที่ดูแลตารางเท่านั้น · เครื่องนี้จะจำไว้ 30 วัน</p>
-        <div class="modal-actions">
-            <button class="btn-primary" id="adminSubmit" type="button">ปลดล็อก</button>
-        </div>
-    </form>
-</dialog>
-
-<!-- ─── LIVE SETTINGS ─── -->
-<dialog class="sheet-modal" id="liveModal">
-    <form method="dialog" class="modal-card">
-        <div class="modal-head">
-            <h2>ตั้งค่า Live / Zoom</h2>
-            <button class="icon-btn ghost" id="liveClose" type="button" aria-label="ปิด">
-                <svg class="ic"><use href="#i-close"/></svg>
-            </button>
-        </div>
-
-        <label class="field">
-            <span class="field-label">ลิงก์ห้อง Zoom</span>
-            <input type="url" id="lsZoom" class="field-input" inputmode="url" autocomplete="off"
-                   placeholder="https://us06web.zoom.us/j/…">
-        </label>
-
-        <div class="field-row">
-            <label class="field">
-                <span class="field-label">เวลาเริ่ม</span>
-                <input type="time" id="lsStart" class="field-input">
-            </label>
-            <label class="field">
-                <span class="field-label">เวลาเลิก</span>
-                <input type="time" id="lsEnd" class="field-input">
-            </label>
-        </div>
-
-        <label class="field">
-            <span class="field-label">โซนเวลาอ้างอิง</span>
-            <select id="lsTz" class="field-input">
-                <option value="Europe/Berlin">ยุโรปกลาง · เยอรมนี/ฝรั่งเศส (CET/CEST)</option>
-                <option value="Europe/London">อังกฤษ (GMT/BST)</option>
-                <option value="Europe/Helsinki">ยุโรปตะวันออก · ฟินแลนด์ (EET/EEST)</option>
-                <option value="Asia/Bangkok">ไทย (GMT+7)</option>
-                <option value="local">เวลาท้องถิ่นของเครื่องผู้ชม</option>
-            </select>
-        </label>
-
-        <div class="field-row">
-            <label class="field">
-                <span class="field-label">แจ้ง “ใกล้เริ่ม” ก่อน (นาที)</span>
-                <input type="number" id="lsPre" class="field-input" min="0" max="720" step="5" inputmode="numeric">
-            </label>
-            <label class="field">
-                <span class="field-label">วันที่ถ่ายทอด</span>
-                <select id="lsDays" class="field-input">
-                    <option value="auto">ตามวันที่มีคิวในตาราง</option>
-                    <option value="sat,sun">เสาร์ + อาทิตย์ ทุกสัปดาห์</option>
-                    <option value="sun">อาทิตย์ทุกสัปดาห์</option>
-                    <option value="sat">เสาร์ทุกสัปดาห์</option>
-                    <option value="0,1,2,3,4,5,6">ทุกวัน</option>
-                </select>
-            </label>
-        </div>
-
-        <p class="field-error" id="lsError" hidden></p>
-        <p class="field-hint" id="lsCurrent"></p>
-
-        <ul class="modal-notes">
-            <li><strong>บันทึกลงเครื่องนี้</strong> = เห็นเฉพาะเครื่องนี้ (ไว้ทดลองก่อน)</li>
-            <li>ให้ <strong>ทุกคนเห็นเหมือนกัน</strong> ต้องใส่ค่าลงในแท็บชื่อ <code>config</code> ของ Google Sheets — กดปุ่มคัดลอกแล้ววางในชีตที่ช่อง A1 ได้เลย</li>
-            <li>คอลัมน์ A = ชื่อค่า, คอลัมน์ B = ค่าที่ตั้ง · แอปจะอ่านค่าจากชีตทุกครั้งที่เปิด</li>
-        </ul>
-
-        <div class="modal-actions">
-            <button class="btn-ghost" id="lsCopy" type="button">
-                <svg class="ic"><use href="#i-sheet"/></svg> คัดลอกลงชีต
-            </button>
-            <button class="btn-primary" id="lsSave" type="button">บันทึกลงเครื่องนี้</button>
-        </div>
-        <button class="btn-link" id="lsReset" type="button">ล้างค่าที่บันทึกในเครื่องนี้</button>
-    </form>
-</dialog>
-
-<!-- ─── SOURCE SETTINGS ─── -->
-<dialog class="sheet-modal" id="sourceModal">
-    <form method="dialog" class="modal-card" id="sourceForm">
-        <div class="modal-head">
-            <h2>แหล่งข้อมูล Google Sheets</h2>
-            <button class="icon-btn ghost" id="sourceClose" type="button" aria-label="ปิด">
-                <svg class="ic"><use href="#i-close"/></svg>
-            </button>
-        </div>
-
-        <label class="field">
-            <span class="field-label">วางลิงก์ชีต</span>
-            <input type="url" id="sourceInput" class="field-input" inputmode="url" autocomplete="off"
-                   placeholder="https://docs.google.com/spreadsheets/d/…">
-        </label>
-        <p class="field-error" id="sourceError" hidden></p>
-        <p class="field-hint" id="sourceCurrent"></p>
-
-        <ul class="modal-notes">
-            <li>ชีตต้องแชร์เป็น <strong>“ทุกคนที่มีลิงก์ · ผู้อ่าน”</strong></li>
-            <li>คอลัมน์เรียงเหมือนเดิม: A ลำดับที่ · B ชื่อวัด · C ครั้งที่ · D วันที่ · E พระอาจารย์ · F หัวข้อ</li>
-            <li>ถ้าลิงก์มี <code>#gid=</code> ระบบจะดึงเฉพาะแท็บนั้นให้</li>
-        </ul>
-
-        <div class="modal-actions">
-            <button class="btn-ghost" id="sourceReset" type="button">ใช้ค่าเริ่มต้น</button>
-            <button class="btn-primary" id="sourceSave" type="button">บันทึกและโหลดใหม่</button>
-        </div>
-    </form>
 </dialog>
 
 <!-- ─── DOCK (install prompt + live bar) ─── -->
@@ -438,6 +298,6 @@
 <!-- ─── TOAST ─── -->
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
-<script src="script.js?v=32"></script>
+<script src="script.js?v=33"></script>
 </body>
 </html>
