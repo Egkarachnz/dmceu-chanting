@@ -588,6 +588,7 @@ function timeInZone(instant, tz) {
 
 /* ── โหลดตารางจากชีต (gviz JSONP แบบเดียวกับหน้าเว็บหลัก) ── */
 let sched = [];            // [{ no, temple, round, date, monk, topic, join }]
+let flashRound = null;     // ครั้งที่เพิ่งบันทึก — ให้แถวกะพริบรอบเดียว
 let schedFilter = 'todo';
 let schedLoading = false;
 
@@ -656,7 +657,7 @@ function renderSchedule() {
         return;
     }
     list.innerHTML = rows.map(r => `
-        <article class="sc-row${isTodo(r) ? ' todo' : ''}" data-round="${esc(r.round)}">
+        <article class="sc-row${isTodo(r) ? ' todo' : ''}${r.round === flashRound ? ' just-saved' : ''}" data-round="${esc(r.round)}">
             <div class="sc-date">
                 <strong>${esc(thaiDateShort(r.date))}</strong>
                 <span>${r.date ? esc(thaiDays[r.date.getDay()].replace('วัน', '')) : ''}</span>
@@ -672,6 +673,7 @@ function renderSchedule() {
             </div>
             <button class="icon-btn sc-edit" type="button" title="แก้ไข">${icon('edit')}</button>
         </article>`).join('');
+    flashRound = null;
 }
 
 $('#schedList').addEventListener('click', e => {
@@ -753,8 +755,9 @@ $('#rowForm').addEventListener('submit', async e => {
     showError('#rowError', '');
     const btn = $('#rowSave');
     const label = btn.innerHTML;
-    btn.classList.add('busy');
+    btn.classList.add('saving');
     btn.innerHTML = icon('refresh') + ' กำลังบันทึกลงชีต…';
+    $('#saveBar').hidden = false;
     const r = editingRow;
     const country = $('#rCountry').value.trim();
     const temple = $('#rTemple').value.trim();
@@ -770,13 +773,23 @@ $('#rowForm').addEventListener('submit', async e => {
             attendance: $('#rJoin').value.trim()
         });
         if (temple && country !== (temples[temple] || '')) await saveTemple(temple, country);
-        toast('บันทึกลงชีตแล้ว');
+
+        // บันทึกสำเร็จ: ปุ่มเปลี่ยนเป็นติ๊กถูกแป๊บหนึ่งก่อนปิด จะได้รู้ว่าเข้าจริง
+        $('#saveBar').hidden = true;
+        btn.classList.remove('saving');
+        btn.classList.add('saved');
+        btn.innerHTML = icon('check') + ' บันทึกแล้ว';
+        await new Promise(res => setTimeout(res, 750));
+
+        flashRound = r.round;                 // ให้แถวนั้นกะพริบตอนวาดใหม่
         rowModal.close();
+        toast('บันทึกลงชีตแล้ว');
         loadSchedule();                       // โหลดซ้ำเพื่อยืนยันว่าเข้าจริง
     } catch (err) {
         showError('#rowError', err.message || 'บันทึกไม่สำเร็จ');
     } finally {
-        btn.classList.remove('busy');
+        $('#saveBar').hidden = true;
+        btn.classList.remove('saving', 'saved');
         btn.innerHTML = label;
     }
 });

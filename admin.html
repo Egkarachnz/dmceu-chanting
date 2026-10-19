@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=28">
-<link rel="stylesheet" href="admin.css?v=28">
+<link rel="stylesheet" href="styles.css?v=29">
+<link rel="stylesheet" href="admin.css?v=29">
 
 <script>
 (function () {
@@ -311,7 +311,7 @@
 
         <label class="field">
             <span class="field-label">ชื่อ-ฉายา พระอาจารย์</span>
-            <input class="field-input" id="rMonk" type="text" maxlength="160" placeholder="เช่น พระมหาชลิตนพณัฐ ปภาสชโย">
+            <input class="field-input" id="rMonk" type="text" maxlength="160" placeholder="เช่น พระมหาเอกราช ปธานชโย">
         </label>
 
         <label class="field">
@@ -325,6 +325,8 @@
         </label>
 
         <p class="field-error" id="rowError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+
+        <div class="save-bar" id="saveBar" hidden><i></i></div>
 
         <div class="modal-actions">
             <button class="btn-ghost" type="button" id="rowCancel">ยกเลิก</button>
@@ -392,6 +394,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=28"></script>
+<script src="admin.js?v=29"></script>
 </body>
 </html>
