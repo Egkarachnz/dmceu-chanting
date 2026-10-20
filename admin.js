@@ -618,16 +618,29 @@ $('#reportRange').addEventListener('click', e => {
     if (b && +b.dataset.r !== reportRange) switchReport(() => { reportRange = +b.dataset.r; });
 });
 $('#reportClose').addEventListener('click', () => reportModal.close());
+/* บันทึก/แชร์สำเร็จแล้วปิดหน้าต่างเอง (ไม่ต้องกดกากบาท)
+   แผ่นแชร์ของ iOS: เลือกคำสั่งสำเร็จ (บันทึกรูปภาพ / ส่งเข้า LINE ฯลฯ) = promise สำเร็จ
+   กดยกเลิก/ปัดทิ้ง = ถูกปฏิเสธ (AbortError) → ค้างหน้าเดิมไว้ เพราะอาจแค่เปลี่ยนใจ */
+function finishReport(msg) { if (reportModal.open) reportModal.close(); toast(msg); }
 $('#reportShare').addEventListener('click', () => {
     if (!reportFiles.length) return;
-    navigator.share({ files: reportFiles }).catch(() => {});
+    navigator.share({ files: reportFiles })
+        .then(() => finishReport('ส่งรูปแล้ว'))
+        .catch(() => {});
 });
-// คอมพิวเตอร์ หลายแผ่น: ดาวน์โหลดทีละไฟล์ต่อกัน (เว้นช่วงให้เบราว์เซอร์รับทัน)
+// คอมพิวเตอร์ หลายแผ่น: ดาวน์โหลดทีละไฟล์ต่อกัน (เว้นช่วงให้เบราว์เซอร์รับทัน) เสร็จแล้วปิดหน้าต่าง
 $('#reportSave').addEventListener('click', e => {
     const links = $$('#reportPages .rp-dl');
-    if (links.length < 2) return;
-    e.preventDefault();
-    links.forEach((a, i) => setTimeout(() => a.click(), i * 350));
+    if (links.length > 1) {
+        e.preventDefault();
+        links.forEach((a, i) => setTimeout(() => a.click(), i * 350));
+    }
+    setTimeout(() => finishReport(links.length > 1 ? `ดาวน์โหลด ${links.length} แผ่นแล้ว` : 'ดาวน์โหลดแล้ว'), links.length > 1 ? links.length * 350 + 300 : 500);
+});
+// ลิงก์ดาวน์โหลดใต้แต่ละแผ่น: รูปเดียวปิดเอง · หลายแผ่นเปิดค้างไว้ให้โหลดต่อทีละแผ่น
+$('#reportPages').addEventListener('click', e => {
+    if (!e.target.closest('.rp-dl') || $$('#reportPages .rp-dl').length > 1) return;
+    setTimeout(() => finishReport('ดาวน์โหลดแล้ว'), 500);
 });
 
 /* ─── ปุ่มลืมตาดูรหัสผ่าน (ใช้ร่วมกันทุกช่องรหัสผ่าน) ───
