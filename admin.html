@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=48">
-<link rel="stylesheet" href="admin.css?v=48">
+<link rel="stylesheet" href="styles.css?v=49">
+<link rel="stylesheet" href="admin.css?v=49">
 
 <script>
 (function () {
@@ -80,14 +80,14 @@
         </a>
         <div class="appbar-actions">
             <button class="icon-btn" id="themeBtn" type="button" title="สลับธีม" aria-label="สลับธีม">
-                <svg class="ic ic-sun"><use href="#i-sun"/></svg>
-                <svg class="ic ic-moon"><use href="#i-moon"/></svg>
+                <svg class="ic ic-sun" data-i="sun"><use href="#i-sun"/></svg>
+                <svg class="ic ic-moon" data-i="moon"><use href="#i-moon"/></svg>
             </button>
             <button class="icon-btn" id="pwBtn" type="button" title="เปลี่ยนรหัสผ่าน" aria-label="เปลี่ยนรหัสผ่าน" hidden>
-                <svg class="ic"><use href="#i-lock"/></svg>
+                <svg class="ic" data-i="lock"><use href="#i-lock"/></svg>
             </button>
             <button class="icon-btn" id="logoutBtn" type="button" title="ออกจากระบบ" aria-label="ออกจากระบบ" hidden>
-                <svg class="ic"><use href="#i-logout"/></svg>
+                <svg class="ic" data-i="logout"><use href="#i-logout"/></svg>
             </button>
         </div>
     </div>
@@ -97,7 +97,7 @@
 
     <!-- ─── ล็อกอิน ─── -->
     <section class="auth-card" id="authView">
-        <div class="auth-icon"><svg class="ic"><use href="#i-lock"/></svg></div>
+        <div class="auth-icon"><svg class="ic" data-i="lock"><use href="#i-lock"/></svg></div>
         <h1 class="auth-title">เข้าสู่ระบบทีมงาน</h1>
         <p class="auth-sub">เฉพาะอีเมลที่ได้รับสิทธิ์แอดมินเท่านั้น</p>
         <form id="loginForm" class="auth-form" method="post" action="#" autocomplete="on">
@@ -110,12 +110,12 @@
                 <span class="field-pw">
                     <input class="field-input" id="loginPass" type="password" name="password" autocomplete="current-password" enterkeyhint="go" required placeholder="••••••••">
                     <button class="field-eye" type="button" aria-label="แสดงรหัสผ่าน">
-                        <svg class="ic ic-on"><use href="#i-eye"/></svg>
-                        <svg class="ic ic-off"><use href="#i-eye-off"/></svg>
+                        <svg class="ic ic-on" data-i="eye"><use href="#i-eye"/></svg>
+                        <svg class="ic ic-off" data-i="eye-off"><use href="#i-eye-off"/></svg>
                     </button>
                 </span>
             </label>
-            <p class="field-error" id="loginError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+            <p class="field-error" id="loginError" hidden><svg class="ic" data-i="alert"><use href="#i-alert"/></svg><span></span></p>
             <button class="btn-primary" id="loginBtn" type="submit">เข้าสู่ระบบ</button>
         </form>
         <p class="auth-note">ลืมรหัสผ่าน? ตั้งใหม่ได้เองที่ Supabase → SQL Editor (ดูขั้นตอนในไฟล์ <code>docs/reset-password.md</code>)<br>เข้าได้แล้วกดรูปกุญแจมุมขวาบนเพื่อเปลี่ยนเป็นรหัสที่จำง่าย</p>
@@ -125,13 +125,13 @@
     <section id="appView" hidden>
         <nav class="tabs" id="tabs" role="tablist">
             <button class="tab-btn on" type="button" data-tab="schedule" role="tab">
-                <svg class="ic"><use href="#i-table"/></svg><span>ตารางสวดมนต์</span>
+                <svg class="ic" data-i="table"><use href="#i-table"/></svg><span>ตารางสวดมนต์</span>
             </button>
             <button class="tab-btn" type="button" data-tab="events" role="tab">
-                <svg class="ic"><use href="#i-event"/></svg><span>กิจกรรม</span>
+                <svg class="ic" data-i="event"><use href="#i-event"/></svg><span>กิจกรรม</span>
             </button>
             <button class="tab-btn" type="button" data-tab="line" role="tab">
-                <svg class="ic"><use href="#i-chat"/></svg><span>ข้อความ LINE</span>
+                <svg class="ic" data-i="chat"><use href="#i-chat"/></svg><span>ข้อความ LINE</span>
             </button>
         </nav>
 
@@ -139,21 +139,21 @@
         <div class="pane" id="paneSchedule">
             <div class="admin-head">
                 <div class="admin-head-text">
-                    <h1 class="admin-title"><svg class="ic"><use href="#i-table"/></svg> ตารางสวดมนต์</h1>
+                    <h1 class="admin-title"><svg class="ic" data-i="table"><use href="#i-table"/></svg> ตารางสวดมนต์</h1>
                     <p class="admin-sub" id="schedSub">กำลังโหลด…</p>
                 </div>
                 <div class="head-actions">
                     <button class="btn-ghost btn-sm" id="reportBtn" type="button" title="สร้างรูปรายงานวัดที่ยังไม่มีข้อมูล">
-                        <svg class="ic"><use href="#i-image"/></svg> รีพอร์ต
+                        <svg class="ic" data-i="image"><use href="#i-image"/></svg> รีพอร์ต
                     </button>
-                    <button class="btn-ghost btn-sm" id="schedReload" type="button" title="โหลดจากชีตใหม่">
-                        <svg class="ic"><use href="#i-refresh"/></svg> โหลดใหม่
+                    <button class="btn-ghost btn-sm" id="schedReload" type="button" title="โหลดจากชีตใหม่" aria-label="โหลดจากชีตใหม่">
+                        <svg class="ic" data-i="refresh"><use href="#i-refresh"/></svg><span class="btn-text">โหลดใหม่</span>
                     </button>
                 </div>
             </div>
 
             <button class="add-btn" id="pasteBtn" type="button">
-                <span class="add-btn-ic"><svg class="ic"><use href="#i-copy"/></svg></span>
+                <span class="add-btn-ic"><svg class="ic" data-i="copy"><use href="#i-copy"/></svg></span>
                 <span class="add-btn-text">
                     <strong>วางข้อความ · เติมให้อัตโนมัติ</strong>
                     <span>วางโพสต์ที่คัดลอกมา ระบบหาวัดและเติมชื่อพระ/หัวข้อให้</span>
@@ -177,16 +177,16 @@
         <div class="pane" id="paneEvents" hidden>
             <div class="admin-head">
                 <div class="admin-head-text">
-                    <h1 class="admin-title"><svg class="ic"><use href="#i-event"/></svg> โพสต์กิจกรรม</h1>
+                    <h1 class="admin-title"><svg class="ic" data-i="event"><use href="#i-event"/></svg> โพสต์กิจกรรม</h1>
                     <p class="admin-sub" id="adminSub">กำลังโหลด…</p>
                 </div>
                 <a class="btn-ghost btn-sm" href="./" target="_blank" rel="noopener">
-                    <svg class="ic"><use href="#i-external"/></svg> ดูหน้าเว็บ
+                    <svg class="ic" data-i="external"><use href="#i-external"/></svg> ดูหน้าเว็บ
                 </a>
             </div>
 
             <button class="add-btn" id="addBtn" type="button">
-                <span class="add-btn-ic"><svg class="ic"><use href="#i-plus"/></svg></span>
+                <span class="add-btn-ic"><svg class="ic" data-i="plus"><use href="#i-plus"/></svg></span>
                 <span class="add-btn-text">
                     <strong>เพิ่มโพสต์กิจกรรม</strong>
                     <span>ใส่ได้หลายรูปต่อโพสต์ · ย่อขนาดให้อัตโนมัติ</span>
@@ -204,11 +204,11 @@
         <div class="pane" id="paneLine" hidden>
             <div class="admin-head">
                 <div class="admin-head-text">
-                    <h1 class="admin-title"><svg class="ic"><use href="#i-chat"/></svg> ข้อความ LINE</h1>
+                    <h1 class="admin-title"><svg class="ic" data-i="chat"><use href="#i-chat"/></svg> ข้อความ LINE</h1>
                     <p class="admin-sub" id="lineSub">เลือกครั้งที่จะประกาศ</p>
                 </div>
                 <button class="btn-ghost btn-sm" id="tplBtn" type="button" title="แก้ข้อความต้นแบบและค่าคงที่">
-                    <svg class="ic"><use href="#i-edit"/></svg> ต้นแบบ
+                    <svg class="ic" data-i="edit"><use href="#i-edit"/></svg> ต้นแบบ
                 </button>
             </div>
 
@@ -217,13 +217,13 @@
                 <select class="field-input" id="lineRound"></select>
             </label>
 
-            <p class="warn-box" id="lineWarn" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+            <p class="warn-box" id="lineWarn" hidden><svg class="ic" data-i="alert"><use href="#i-alert"/></svg><span></span></p>
 
             <pre class="msg-box" id="lineOut"></pre>
 
             <div class="msg-actions">
-                <button class="btn-primary" id="lineCopy" type="button"><svg class="ic"><use href="#i-copy"/></svg> คัดลอกข้อความ</button>
-                <button class="btn-ghost" id="lineShare" type="button" hidden><svg class="ic"><use href="#i-share"/></svg> แชร์</button>
+                <button class="btn-primary" id="lineCopy" type="button"><svg class="ic" data-i="copy"><use href="#i-copy"/></svg> คัดลอกข้อความ</button>
+                <button class="btn-ghost" id="lineShare" type="button" hidden><svg class="ic" data-i="share"><use href="#i-share"/></svg> แชร์</button>
             </div>
 
             <p class="admin-foot">
@@ -238,13 +238,13 @@
     <form class="modal-card edit-card" id="editForm" method="dialog">
         <div class="modal-head">
             <h2 id="editTitle">เพิ่มโพสต์กิจกรรม</h2>
-            <button class="icon-btn" type="button" id="editClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+            <button class="icon-btn" type="button" id="editClose" aria-label="ปิด"><svg class="ic" data-i="close"><use href="#i-close"/></svg></button>
         </div>
 
         <input type="file" id="fileInput" accept="image/*" multiple hidden>
         <div class="drop" id="drop" tabindex="0" role="button" aria-label="เลือกรูป">
             <div class="drop-empty" id="dropEmpty">
-                <svg class="ic"><use href="#i-image"/></svg>
+                <svg class="ic" data-i="image"><use href="#i-image"/></svg>
                 <strong>แตะเพื่อเลือกรูป</strong>
                 <span>เลือกได้หลายรูปพร้อมกัน · ลากมาวางก็ได้ · JPG / PNG / HEIC</span>
             </div>
@@ -269,7 +269,7 @@
             <input type="checkbox" id="fVisible" class="switch" checked>
         </label>
 
-        <p class="field-error" id="editError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+        <p class="field-error" id="editError" hidden><svg class="ic" data-i="alert"><use href="#i-alert"/></svg><span></span></p>
 
         <div class="upload-progress" id="uploadProgress" hidden>
             <div class="upload-bar"><div class="upload-fill" id="uploadFill"></div></div>
@@ -278,7 +278,7 @@
 
         <div class="modal-actions">
             <button class="btn-ghost" type="button" id="editCancel">ยกเลิก</button>
-            <button class="btn-primary" type="submit" id="editSave"><svg class="ic"><use href="#i-check"/></svg> บันทึก</button>
+            <button class="btn-primary" type="submit" id="editSave"><svg class="ic" data-i="check"><use href="#i-check"/></svg> บันทึก</button>
         </div>
     </form>
 </dialog>
@@ -290,7 +290,7 @@
         <p class="confirm-text" id="confirmText">รูปจะถูกลบออกจากหน้าเว็บทันที และกู้คืนไม่ได้</p>
         <div class="modal-actions">
             <button class="btn-ghost" type="button" id="confirmNo">ยกเลิก</button>
-            <button class="btn-primary btn-danger" type="button" id="confirmYes"><svg class="ic"><use href="#i-trash"/></svg> ลบเลย</button>
+            <button class="btn-primary btn-danger" type="button" id="confirmYes"><svg class="ic" data-i="trash"><use href="#i-trash"/></svg> ลบเลย</button>
         </div>
     </div>
 </dialog>
@@ -300,7 +300,7 @@
     <form class="modal-card edit-card" id="rowForm" method="dialog">
         <div class="modal-head">
             <h2 id="rowTitle">แก้ข้อมูลคิวสวดมนต์</h2>
-            <button class="icon-btn" type="button" id="rowClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+            <button class="icon-btn" type="button" id="rowClose" aria-label="ปิด"><svg class="ic" data-i="close"><use href="#i-close"/></svg></button>
         </div>
 
         <div class="field-row">
@@ -346,15 +346,15 @@
             <input class="field-input" id="rJoin" type="number" inputmode="numeric" min="0" placeholder="กรอกหลังจบงาน">
         </label>
 
-        <p class="auto-note" id="rowAutoNote" hidden><svg class="ic"><use href="#i-check"/></svg><span></span></p>
+        <p class="auto-note" id="rowAutoNote" hidden><svg class="ic" data-i="check"><use href="#i-check"/></svg><span></span></p>
 
-        <p class="field-error" id="rowError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+        <p class="field-error" id="rowError" hidden><svg class="ic" data-i="alert"><use href="#i-alert"/></svg><span></span></p>
 
         <div class="save-bar" id="saveBar" hidden><i></i></div>
 
         <div class="modal-actions">
             <button class="btn-ghost" type="button" id="rowCancel">ยกเลิก</button>
-            <button class="btn-primary" type="submit" id="rowSave"><svg class="ic"><use href="#i-save"/></svg> บันทึกลงชีต</button>
+            <button class="btn-primary" type="submit" id="rowSave"><svg class="ic" data-i="save"><use href="#i-save"/></svg> บันทึกลงชีต</button>
         </div>
     </form>
 </dialog>
@@ -365,13 +365,13 @@
     <div class="modal-card edit-card">
         <div class="modal-head">
             <h2>รีพอร์ตวัดที่ยังไม่มีข้อมูล</h2>
-            <button class="icon-btn" type="button" id="reportClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+            <button class="icon-btn" type="button" id="reportClose" aria-label="ปิด"><svg class="ic" data-i="close"><use href="#i-close"/></svg></button>
         </div>
         <img id="reportImg" class="report-img" alt="รีพอร์ตวัดที่ยังไม่มีข้อมูล">
         <p class="field-hint report-hint" id="reportHint">บน iPhone: แตะค้างที่รูป แล้วเลือก “บันทึกไปยังรูปภาพ” ก็ได้</p>
         <div class="modal-actions">
-            <button class="btn-primary" type="button" id="reportShare" hidden><svg class="ic"><use href="#i-save"/></svg> บันทึกรูป / แชร์</button>
-            <a class="btn-primary" id="reportSave" download="รีพอร์ตวัดที่ยังไม่มีข้อมูล.png"><svg class="ic"><use href="#i-save"/></svg> บันทึกเป็นไฟล์รูป</a>
+            <button class="btn-primary" type="button" id="reportShare" hidden><svg class="ic" data-i="save"><use href="#i-save"/></svg> บันทึกรูป / แชร์</button>
+            <a class="btn-primary" id="reportSave" download="รีพอร์ตวัดที่ยังไม่มีข้อมูล.png"><svg class="ic" data-i="save"><use href="#i-save"/></svg> บันทึกเป็นไฟล์รูป</a>
         </div>
     </div>
 </dialog>
@@ -381,7 +381,7 @@
     <form class="modal-card edit-card" id="pasteForm" method="dialog">
         <div class="modal-head">
             <h2>วางข้อความโพสต์</h2>
-            <button class="icon-btn" type="button" id="pasteClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+            <button class="icon-btn" type="button" id="pasteClose" aria-label="ปิด"><svg class="ic" data-i="close"><use href="#i-close"/></svg></button>
         </div>
         <label class="field">
             <span class="field-label">วางข้อความที่คัดลอกมาทั้งก้อน</span>
@@ -392,10 +392,10 @@
             <li>ระบบหาแถวจาก <strong>ชื่อวัด / วันที่ / ครั้งที่</strong> ในข้อความ</li>
             <li>เติมเฉพาะ <strong>ชื่อพระผู้เทศน์สอน</strong> กับ <strong>หัวข้อเทศน์</strong> แล้วเปิดหน้าตรวจให้ ยังไม่บันทึกจนกว่าจะกดยืนยัน</li>
         </ul>
-        <p class="field-error" id="pasteError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+        <p class="field-error" id="pasteError" hidden><svg class="ic" data-i="alert"><use href="#i-alert"/></svg><span></span></p>
         <div class="modal-actions">
             <button class="btn-ghost" type="button" id="pasteCancel">ยกเลิก</button>
-            <button class="btn-primary" type="submit" id="pasteGo"><svg class="ic"><use href="#i-check"/></svg> เติมข้อมูล</button>
+            <button class="btn-primary" type="submit" id="pasteGo"><svg class="ic" data-i="check"><use href="#i-check"/></svg> เติมข้อมูล</button>
         </div>
     </form>
 </dialog>
@@ -405,7 +405,7 @@
     <form class="modal-card edit-card" id="pwForm" method="dialog">
         <div class="modal-head">
             <h2>เปลี่ยนรหัสผ่าน</h2>
-            <button class="icon-btn" type="button" id="pwClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+            <button class="icon-btn" type="button" id="pwClose" aria-label="ปิด"><svg class="ic" data-i="close"><use href="#i-close"/></svg></button>
         </div>
 
         <p class="confirm-text" id="pwWho"></p>
@@ -415,8 +415,8 @@
             <span class="field-pw">
                 <input class="field-input" id="pwNew" type="password" name="new-password" autocomplete="new-password" minlength="8" required placeholder="อย่างน้อย 8 ตัวอักษร">
                 <button class="field-eye" type="button" aria-label="แสดงรหัสผ่าน">
-                    <svg class="ic ic-on"><use href="#i-eye"/></svg>
-                    <svg class="ic ic-off"><use href="#i-eye-off"/></svg>
+                    <svg class="ic ic-on" data-i="eye"><use href="#i-eye"/></svg>
+                    <svg class="ic ic-off" data-i="eye-off"><use href="#i-eye-off"/></svg>
                 </button>
             </span>
         </label>
@@ -426,8 +426,8 @@
             <span class="field-pw">
                 <input class="field-input" id="pwNew2" type="password" name="confirm-password" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false" minlength="8" required placeholder="••••••••">
                 <button class="field-eye" type="button" aria-label="แสดงรหัสผ่าน">
-                    <svg class="ic ic-on"><use href="#i-eye"/></svg>
-                    <svg class="ic ic-off"><use href="#i-eye-off"/></svg>
+                    <svg class="ic ic-on" data-i="eye"><use href="#i-eye"/></svg>
+                    <svg class="ic ic-off" data-i="eye-off"><use href="#i-eye-off"/></svg>
                 </button>
             </span>
         </label>
@@ -437,11 +437,11 @@
             <li>เครื่องอื่นที่ค้างล็อกอินไว้จะยังใช้ได้ จนกว่าจะกดออกจากระบบ</li>
         </ul>
 
-        <p class="field-error" id="pwError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+        <p class="field-error" id="pwError" hidden><svg class="ic" data-i="alert"><use href="#i-alert"/></svg><span></span></p>
 
         <div class="modal-actions">
             <button class="btn-ghost" type="button" id="pwCancel">ยกเลิก</button>
-            <button class="btn-primary" type="submit" id="pwSave"><svg class="ic"><use href="#i-check"/></svg> บันทึกรหัสใหม่</button>
+            <button class="btn-primary" type="submit" id="pwSave"><svg class="ic" data-i="check"><use href="#i-check"/></svg> บันทึกรหัสใหม่</button>
         </div>
     </form>
 </dialog>
@@ -450,7 +450,7 @@
     <form class="modal-card edit-card" id="tplForm" method="dialog">
         <div class="modal-head">
             <h2>ข้อความต้นแบบ</h2>
-            <button class="icon-btn" type="button" id="tplClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+            <button class="icon-btn" type="button" id="tplClose" aria-label="ปิด"><svg class="ic" data-i="close"><use href="#i-close"/></svg></button>
         </div>
 
         <div class="field-row">
@@ -492,11 +492,11 @@
             <li><code>{{meeting_id}}</code> · <code>{{passcode}}</code> · <code>{{zoom_link}}</code></li>
         </ul>
 
-        <p class="field-error" id="tplError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+        <p class="field-error" id="tplError" hidden><svg class="ic" data-i="alert"><use href="#i-alert"/></svg><span></span></p>
 
         <div class="modal-actions">
             <button class="btn-ghost" type="button" id="tplReset">คืนค่าเริ่มต้น</button>
-            <button class="btn-primary" type="submit" id="tplSave"><svg class="ic"><use href="#i-check"/></svg> บันทึก</button>
+            <button class="btn-primary" type="submit" id="tplSave"><svg class="ic" data-i="check"><use href="#i-check"/></svg> บันทึก</button>
         </div>
     </form>
 </dialog>
@@ -504,6 +504,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=48"></script>
+<script src="admin.js?v=49"></script>
 </body>
 </html>

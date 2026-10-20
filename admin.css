@@ -40,8 +40,6 @@ body.admin-page { padding-bottom: calc(var(--sat-bottom) + 40px); }
 /* ─── หัวหน้า ─── */
 .admin-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .admin-title { font-size: 20px; font-weight: 600; letter-spacing: -.01em; display: flex; align-items: center; gap: 8px; }
-.admin-title .ic { width: 20px; height: 20px; color: var(--gold-dim); }
-[data-theme="dark"] .admin-title .ic { color: var(--gold-light); }
 .admin-sub { font-size: 12.5px; color: var(--text-mute); }
 .btn-sm { flex: none; min-height: 38px; padding: 0 13px; font-size: 13px; text-decoration: none; }
 .btn-sm .ic { width: 14px; height: 14px; }
@@ -405,3 +403,86 @@ input:-webkit-autofill:focus {
 .auto-note.warn { background: rgba(217,119,6,.1); color: #b45309; border-color: rgba(217,119,6,.3); }
 [data-theme="dark"] .auto-note.warn { color: #fbbf24; }
 .sc-row.just-filled { animation: savedFlash 1.8s var(--ease); }
+
+/* ═════════ สีของไอคอน — ใช้สีตามความหมาย ดูแล้วรู้ทันทีว่าปุ่มทำอะไร ═════════
+   ตาราง=น้ำเงิน · กิจกรรม=ม่วง · LINE=เขียว · แก้ไข=น้ำเงิน · ลบ/ออก=แดง · เพิ่ม/บันทึก=เขียว
+   รีเฟรช=เขียวน้ำทะเล · รูป=ชมพู · ล็อก=เหลืองอำพัน · ลิงก์/แชร์=ฟ้า
+   ใช้ data-i (ชื่อไอคอน) เลือกสี จึงเปลี่ยนสีได้ที่ตัวแปรชุดเดียวด้านล่าง */
+:root {
+    --c-blue: #3b6ef6;   --c-violet: #7c3aed;  --c-green: #0f9d58;  --c-red: #e0374a;
+    --c-orange: #ea580c; --c-teal: #0d9488;    --c-sky: #0284c7;    --c-amber: #d97706;
+    --c-indigo: #4f46e5; --c-pink: #db2777;    --c-slate: #64748b;
+    --c-line: #06a94d;
+}
+[data-theme="dark"] {
+    --c-blue: #7aa2ff;   --c-violet: #b79cff;  --c-green: #34d399;  --c-red: #ff6b7d;
+    --c-orange: #fb923c; --c-teal: #2dd4bf;    --c-sky: #38bdf8;    --c-amber: #fbbf24;
+    --c-indigo: #a5b4fc; --c-pink: #f472b6;    --c-slate: #a3b1c6;
+    --c-line: #3ddc84;
+}
+
+/* สีตามชื่อไอคอน (ใช้ทุกที่) — ยกเว้นจุดที่ต้องใช้สีของปุ่ม/กล่องเอง ดูบรรทัด "คืนสี" ด้านล่าง */
+.ic[data-i="edit"], .ic[data-i="table"]              { color: var(--c-blue); }
+.ic[data-i="event"]                                  { color: var(--c-violet); }
+.ic[data-i="chat"]                                   { color: var(--c-line); }
+.ic[data-i="image"]                                  { color: var(--c-pink); }
+.ic[data-i="refresh"]                                { color: var(--c-teal); }
+.ic[data-i="copy"]                                   { color: var(--c-indigo); }
+.ic[data-i="share"], .ic[data-i="external"], .ic[data-i="link"] { color: var(--c-sky); }
+.ic[data-i="trash"], .ic[data-i="logout"]            { color: var(--c-red); }
+.ic[data-i="lock"]                                   { color: var(--c-amber); }
+.ic[data-i="plus"], .ic[data-i="check"], .ic[data-i="save"] { color: var(--c-green); }
+.ic[data-i="up"], .ic[data-i="down"], .ic[data-i="chev-left"], .ic[data-i="chev-right"] { color: var(--c-slate); }
+.icon-btn .ic-sun  { color: var(--c-amber); }
+.icon-btn .ic-moon { color: var(--c-indigo); }
+
+/* คืนสี: ปุ่มทึบ / กล่องแจ้งเตือน / กรอบไอคอนทึบ ใช้สีตัวหนังสือของตัวเอง */
+.btn-primary .ic, .field-error .ic, .warn-box .ic, .auto-note .ic, .auth-icon .ic,
+.tab-btn.on .ic, .add-btn-ic .ic, .shot-x .ic, .state .ic { color: inherit; }
+
+/* ปุ่มเฉพาะกิจ ให้สีตรงหน้าที่ */
+#reportBtn .ic { color: var(--c-orange); }
+#schedReload .ic { color: var(--c-teal); }
+#lineShare .ic { color: var(--c-sky); }
+.drop-empty .ic { color: var(--c-violet); }
+.icon-btn.danger .ic, .ev-actions .icon-btn.danger .ic { color: var(--c-red); }
+
+/* หัวข้อแต่ละหน้า: ไอคอนอยู่ในกรอบสีอ่อนของหมวดนั้น */
+.admin-title .ic {
+    width: 34px; height: 34px; padding: 7px; box-sizing: border-box; flex: none;
+    border-radius: 11px; background: rgba(100,116,139,.14);
+}
+@supports (background: color-mix(in srgb, red 10%, transparent)) {
+    .admin-title .ic { background: color-mix(in srgb, currentColor 15%, transparent); }
+}
+
+/* แท็บ: ไอคอนมีสีของหมวด ตอนเลือกอยู่พื้นแท็บเป็นสีของหมวดนั้น ตัวหนังสือขาว */
+.tab-btn.on { color: #fff; }
+.tab-btn.on .ic { color: #fff; }
+.tab-btn.on[data-tab="schedule"] { background: #3b6ef6; }
+.tab-btn.on[data-tab="events"]   { background: #7c3aed; }
+.tab-btn.on[data-tab="line"]     { background: #06a94d; }
+[data-theme="dark"] .tab-btn.on[data-tab="schedule"] { background: #3b6ef6; color: #fff; }
+[data-theme="dark"] .tab-btn.on[data-tab="events"]   { background: #7c3aed; color: #fff; }
+[data-theme="dark"] .tab-btn.on[data-tab="line"]     { background: #06a94d; color: #fff; }
+
+/* ปุ่มใหญ่ "เพิ่มโพสต์" / "วางข้อความ": กรอบไอคอนสีเต็ม ไอคอนขาว */
+.add-btn-ic { color: #fff; }
+.add-btn-ic .ic { color: #fff !important; }
+#addBtn .add-btn-ic, [data-theme="dark"] #addBtn .add-btn-ic   { background: #16a34a; color: #fff; }
+#pasteBtn .add-btn-ic, [data-theme="dark"] #pasteBtn .add-btn-ic { background: #0d9488; color: #fff; }
+#addBtn:hover   { border-color: #16a34a; background: rgba(22,163,74,.08); }
+#pasteBtn:hover { border-color: #0d9488; background: rgba(13,148,136,.08); }
+
+/* แถวในตาราง: ยังไม่กรอก = เหลืองอำพัน (มีอยู่แล้ว) · กรอกครบ = เขียวบาง ๆ ให้ต่างกันทันทีที่เห็น */
+.sc-row:not(.todo) { border-left: 3px solid var(--c-green); }
+.sc-row:not(.todo) .sc-date { background: rgba(22,163,74,.1); }
+.sc-row.todo .sc-date { background: rgba(217,119,6,.12); }
+
+/* หัวหน้าบนจอแคบ: ชื่อหน้าอยู่บรรทัดเดียว ปุ่มโหลดใหม่เหลือแค่ไอคอน */
+.admin-title { white-space: nowrap; }
+@media (max-width: 420px) {
+    .admin-title { font-size: 18px; }
+    #schedReload .btn-text { display: none; }
+    #schedReload { padding: 0 11px; }
+}

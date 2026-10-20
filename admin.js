@@ -16,7 +16,7 @@ const IMG_QUALITY  = 0.86;
 const $  = s => document.querySelector(s);
 const $$ = s => Array.from(document.querySelectorAll(s));
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const icon = n => `<svg class="ic"><use href="#i-${n}"/></svg>`;
+const icon = n => `<svg class="ic" data-i="${n}"><use href="#i-${n}"/></svg>`;
 
 const db = window.supabase.createClient(SUPA.url, SUPA.key, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false }
