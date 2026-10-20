@@ -1044,12 +1044,137 @@ function openRow(r) {
     $('#countryList').innerHTML = [...new Set(Object.values(temples))].filter(Boolean)
         .map(c => `<option value="${esc(c)}">`).join('');
     showError('#rowError', '');
+    $('#rowAutoNote').hidden = true;
     rowModal.showModal();
     $('#rowForm').scrollTop = 0;
 }
 $('#rowClose').addEventListener('click', () => rowModal.close());
 $('#rowCancel').addEventListener('click', () => rowModal.close());
 rowModal.addEventListener('close', () => { editingRow = null; });
+
+/* ── วางข้อความโพสต์ → เติมชื่อพระ/หัวข้อให้อัตโนมัติ ──
+   รับข้อความที่คัดลอกมาทั้งก้อน เช่น
+     วัดพุทธไฮล์บรอนน์ / วันเสาร์ที่ 24 ตุลาคม 2569 /
+     พระผู้เทศน์สอน : … / หัวข้อเทศน์ : “…”
+   หาแถวในตารางจาก ครั้งที่ → ชื่อวัด → วันที่ แล้วเติมเฉพาะ "พระอาจารย์" กับ "หัวข้อเทศน์"
+   ไม่บันทึกเอง — เปิดหน้าแก้ไขให้ตรวจก่อน เพราะการบันทึกเขียนลงชีตจริง */
+const INVISIBLE = /[​-‏‪-‮⁠﻿]/g;
+const tidy = t => String(t || '').replace(INVISIBLE, '').replace(/[   ]/g, ' ').replace(/[ \t]+/g, ' ').trim();
+const norm = t => tidy(t).replace(/\s+/g, '');
+
+/** ตัดเครื่องหมายคำพูดที่ครอบทั้งหัวข้อ (ไม่ตัดเครื่องหมายคำพูดที่อยู่ข้างในประโยค) */
+function stripOuterQuotes(t) {
+    t = tidy(t);
+    const OPEN = /^[“”"‘’'「『«]+/, CLOSE = /[“”"‘’'」』»]+$/;
+    if (OPEN.test(t) && CLOSE.test(t)) t = t.replace(OPEN, '').replace(CLOSE, '');
+    return t.trim();
+}
+
+function parseSermonPost(text) {
+    const raw = String(text || '').replace(/\r/g, '');
+    const lines = raw.split('\n').map(tidy);
+    const out = { monk: '', topic: '', round: '', date: null, lines };
+
+    const MONK = /^(?:พระผู้เทศน์สอน|พระผู้เทศน์|พระอาจารย์ผู้เทศน์|พระอาจารย์|ผู้เทศน์สอน|ผู้เทศน์|เทศน์โดย)\s*[:：]\s*(.*)$/;
+    const TOPIC = /^(?:หัวข้อเทศน์|หัวข้อธรรม|หัวข้อ|เรื่อง)\s*[:：]\s*(.*)$/;
+    const ANY_LABEL = /^[^\s:：]{2,24}\s*[:：]/;
+
+    for (let i = 0; i < lines.length; i++) {
+        const L = lines[i];
+        let m;
+        if (!out.monk && (m = L.match(MONK))) {
+            out.monk = tidy(m[1]);
+        } else if (!out.topic && (m = L.match(TOPIC))) {
+            let t = m[1];
+            // หัวข้อยาวที่ขึ้นบรรทัดใหม่กลางเครื่องหมายคำพูด: ต่อบรรทัดถัดไปจนกว่าจะปิดคำพูด
+            if (/^[“"‘'「『«]/.test(t) && !/[”"’'」』»]$/.test(t)) {
+                for (let j = i + 1; j < lines.length && !ANY_LABEL.test(lines[j]) && lines[j]; j++) {
+                    t += ' ' + lines[j];
+                    if (/[”"’'」』»]$/.test(lines[j])) break;
+                }
+            }
+            out.topic = stripOuterQuotes(t);
+        }
+    }
+    out.monk = tidy(out.monk);
+
+    const r = raw.match(/ครั้งที่\s*(\d{3})/);
+    if (r) out.round = r[1];
+
+    const monthRe = thaiMonthsFull.join('|');
+    const d = raw.match(new RegExp(`(\\d{1,2})\\s*(${monthRe})\\s*(?:พ\\.?\\s*ศ\\.?\\s*)?(\\d{4})?`));
+    if (d) {
+        let y = d[3] ? +d[3] : null;
+        if (y && y > 2400) y -= 543;
+        out.date = { day: +d[1], month: thaiMonthsFull.indexOf(d[2]), year: y };
+    }
+    return out;
+}
+
+/** หาแถวในตารางจากข้อความที่วาง → { row, how, dateMismatch } หรือ null */
+function findRowForPost(p) {
+    const sameDate = r => r.date && p.date && r.date.getDate() === p.date.day && r.date.getMonth() === p.date.month
+        && (!p.date.year || r.date.getFullYear() === p.date.year);
+
+    let row = null, how = '';
+    if (p.round) { row = sched.find(r => r.round === p.round); if (row) how = 'ครั้งที่'; }
+
+    if (!row) {
+        const hay = norm(p.lines.join(' '));
+        const hits = sched.filter(r => norm(r.temple) && hay.includes(norm(r.temple)))
+            .sort((a, b) => norm(b.temple).length - norm(a.temple).length);
+        if (hits.length) { row = hits.find(sameDate) || hits[0]; how = 'ชื่อวัด'; }
+    }
+    if (!row && p.date) {
+        const byDate = sched.filter(sameDate);
+        if (byDate.length === 1) { row = byDate[0]; how = 'วันที่'; }
+    }
+    if (!row) return null;
+    return { row, how, dateMismatch: !!(p.date && !sameDate(row)) };
+}
+
+const pasteModal = $('#pasteModal');
+$('#pasteBtn').addEventListener('click', () => {
+    if (!sched.length) return toast('ยังไม่ได้โหลดตาราง · กดโหลดใหม่ก่อน');
+    $('#pasteText').value = '';
+    showError('#pasteError', '');
+    pasteModal.showModal();
+    setTimeout(() => $('#pasteText').focus(), 150);
+});
+$('#pasteClose').addEventListener('click', () => pasteModal.close());
+$('#pasteCancel').addEventListener('click', () => pasteModal.close());
+
+$('#pasteForm').addEventListener('submit', e => {
+    e.preventDefault();
+    showError('#pasteError', '');
+    const text = $('#pasteText').value;
+    if (!tidy(text)) return showError('#pasteError', 'ยังไม่ได้วางข้อความ');
+
+    const p = parseSermonPost(text);
+    if (!p.monk && !p.topic) {
+        return showError('#pasteError', 'ไม่พบ "พระผู้เทศน์สอน :" หรือ "หัวข้อเทศน์ :" ในข้อความ · ตรวจว่าวางครบทั้งก้อนแล้ว');
+    }
+    const hit = findRowForPost(p);
+    if (!hit) {
+        return showError('#pasteError', 'หาแถวในตารางไม่เจอ · ในข้อความต้องมีชื่อวัด วันที่ หรือครั้งที่อย่างใดอย่างหนึ่งที่ตรงกับชีต');
+    }
+
+    pasteModal.close();
+    openRow(hit.row);
+    const filled = [];
+    if (p.monk)  { $('#rMonk').value = p.monk;   filled.push('ชื่อพระอาจารย์'); }
+    if (p.topic) { $('#rTopic').value = p.topic; filled.push('หัวข้อเทศน์'); }
+
+    const note = $('#rowAutoNote');
+    let msg = `เติม${filled.join(' และ ')}จากข้อความที่วางแล้ว (จับคู่ด้วย${hit.how}) · ตรวจให้ถูกต้องแล้วกดบันทึกลงชีต`;
+    note.classList.toggle('warn', hit.dateMismatch || !p.monk || !p.topic);
+    if (hit.dateMismatch) msg += ' · ⚠ วันที่ในข้อความไม่ตรงกับชีต ตรวจแถวให้แน่ใจ';
+    if (!p.monk)  msg += ' · ไม่พบชื่อพระ';
+    if (!p.topic) msg += ' · ไม่พบหัวข้อ';
+    note.querySelector('span').textContent = msg;
+    note.hidden = false;
+});
+
 
 /** เรียก Edge Function (ตรวจสิทธิ์แล้วส่งต่อไป Apps Script → ชีต)
     เขียนผ่าน Google ใช้เวลาประมาณ 3-5 วินาทีเป็นปกติ จึงให้เวลาถึง 45 วินาที

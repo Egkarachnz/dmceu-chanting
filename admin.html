@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=45">
-<link rel="stylesheet" href="admin.css?v=45">
+<link rel="stylesheet" href="styles.css?v=46">
+<link rel="stylesheet" href="admin.css?v=46">
 
 <script>
 (function () {
@@ -151,6 +151,14 @@
                     </button>
                 </div>
             </div>
+
+            <button class="add-btn" id="pasteBtn" type="button">
+                <span class="add-btn-ic"><svg class="ic"><use href="#i-copy"/></svg></span>
+                <span class="add-btn-text">
+                    <strong>วางข้อความ · เติมให้อัตโนมัติ</strong>
+                    <span>วางโพสต์ที่คัดลอกมา ระบบหาวัดและเติมชื่อพระ/หัวข้อให้</span>
+                </span>
+            </button>
 
             <div class="seg" id="schedFilter">
                 <button type="button" class="on" data-f="todo">ยังไม่ได้กรอก</button>
@@ -338,6 +346,8 @@
             <input class="field-input" id="rJoin" type="number" inputmode="numeric" min="0" placeholder="กรอกหลังจบงาน">
         </label>
 
+        <p class="auto-note" id="rowAutoNote" hidden><svg class="ic"><use href="#i-check"/></svg><span></span></p>
+
         <p class="field-error" id="rowError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
 
         <div class="save-bar" id="saveBar" hidden><i></i></div>
@@ -364,6 +374,30 @@
             <a class="btn-primary" id="reportSave" download="รีพอร์ตวัดที่ยังไม่มีข้อมูล.png"><svg class="ic"><use href="#i-save"/></svg> บันทึกเป็นไฟล์รูป</a>
         </div>
     </div>
+</dialog>
+
+<!-- ─── วางข้อความโพสต์เทศน์ → เติมชื่อพระ/หัวข้ออัตโนมัติ ─── -->
+<dialog class="sheet-modal" id="pasteModal">
+    <form class="modal-card edit-card" id="pasteForm" method="dialog">
+        <div class="modal-head">
+            <h2>วางข้อความโพสต์</h2>
+            <button class="icon-btn" type="button" id="pasteClose" aria-label="ปิด"><svg class="ic"><use href="#i-close"/></svg></button>
+        </div>
+        <label class="field">
+            <span class="field-label">วางข้อความที่คัดลอกมาทั้งก้อน</span>
+            <textarea class="field-input field-textarea" id="pasteText" rows="9" spellcheck="false"
+                placeholder="วัดพุทธไฮล์บรอนน์&#10;วันเสาร์ที่ 24 ตุลาคม 2569&#10;พระผู้เทศน์สอน : …&#10;หัวข้อเทศน์ : “…”"></textarea>
+        </label>
+        <ul class="modal-notes">
+            <li>ระบบหาแถวจาก <strong>ชื่อวัด / วันที่ / ครั้งที่</strong> ในข้อความ</li>
+            <li>เติมเฉพาะ <strong>ชื่อพระผู้เทศน์สอน</strong> กับ <strong>หัวข้อเทศน์</strong> แล้วเปิดหน้าตรวจให้ ยังไม่บันทึกจนกว่าจะกดยืนยัน</li>
+        </ul>
+        <p class="field-error" id="pasteError" hidden><svg class="ic"><use href="#i-alert"/></svg><span></span></p>
+        <div class="modal-actions">
+            <button class="btn-ghost" type="button" id="pasteCancel">ยกเลิก</button>
+            <button class="btn-primary" type="submit" id="pasteGo"><svg class="ic"><use href="#i-check"/></svg> เติมข้อมูล</button>
+        </div>
+    </form>
 </dialog>
 
 <!-- ─── เปลี่ยนรหัสผ่าน ─── -->
@@ -470,6 +504,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=45"></script>
+<script src="admin.js?v=46"></script>
 </body>
 </html>

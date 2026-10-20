@@ -393,3 +393,15 @@ input:-webkit-autofill:focus {
 }
 .report-hint { text-align: center; margin: 2px 0 0; word-break: normal; }
 .modal-actions a.btn-ghost { text-decoration: none; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+
+/* ─── เติมอัตโนมัติจากข้อความที่วาง ─── */
+#pasteBtn { margin-bottom: 14px; }
+.auto-note {
+    display: flex; gap: 8px; align-items: flex-start; font-size: 13px; line-height: 1.45;
+    padding: 10px 12px; border-radius: 12px;
+    background: rgba(22,163,74,.1); color: var(--green); border: 1px solid rgba(22,163,74,.28);
+}
+.auto-note .ic { width: 16px; height: 16px; flex: none; margin-top: 2px; }
+.auto-note.warn { background: rgba(217,119,6,.1); color: #b45309; border-color: rgba(217,119,6,.3); }
+[data-theme="dark"] .auto-note.warn { color: #fbbf24; }
+.sc-row.just-filled { animation: savedFlash 1.8s var(--ease); }
