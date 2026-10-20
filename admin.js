@@ -360,7 +360,7 @@ async function buildWeeklyReport(limitWeeks) {
 
     // ขนาดแผ่น 4:5 และตัวอักษรใหญ่ (1080px กว้างย่อบนมือถือราว 3 เท่า)
     const W = 1080, H = 1350, PAD = 44, HEAD = 168, FOOT = 92, GAP = 22, HDR = 84;
-    const DATEW = 100, TX = PAD + 20 + DATEW + 22, RIGHTW = 292;
+    const DATEW = 100, TX = PAD + 20 + DATEW + 22, RIGHTW = 320;
     const textW = W - PAD - 20 - RIGHTW - TX;
     const mc = document.createElement('canvas').getContext('2d');
     const layoutRow = r => {
@@ -502,10 +502,13 @@ async function buildWeeklyReport(limitWeeks) {
                 const cwid = c.measureText(chip).width + 32;
                 rrect(c, W - PAD - 24 - cwid, top, cwid, 42, 21); c.fillStyle = col + '1a'; c.fill();
                 c.fillStyle = col; c.textAlign = 'center'; c.fillText(chip, W - PAD - 24 - cwid / 2, top + 30); c.textAlign = 'right';
-                c.fillStyle = '#5b6483'; c.font = `400 24px ${FONT}`;
-                c.fillText(`ยุโรป ${t.eu} น.`, W - PAD - 24, top + 80);
-                c.fillStyle = '#161d38'; c.font = `500 28px ${FONT}`;
-                c.fillText(`ไทย ${t.th} น.`, W - PAD - 24, top + 118);
+                // เวลายุโรปเป็นเวลาหลักของงาน: ตัวหนาใหญ่เด่น · เวลาไทยเป็นข้อมูลรอง ตัวเล็กสีจาง
+                const euTxt = `ยุโรป ${t.eu} น.`;
+                let eupx = 33;                                       // หดลงถ้ายาวเกินช่องขวา
+                for (; eupx > 26; eupx--) { c.font = `600 ${eupx}px ${FONT}`; if (c.measureText(euTxt).width <= RIGHTW + 10) break; }
+                c.fillStyle = '#161d38'; c.font = `600 ${eupx}px ${FONT}`; c.fillText(euTxt, W - PAD - 24, top + 86);
+                c.fillStyle = '#7a84a6'; c.font = `400 24px ${FONT}`;
+                c.fillText(`ไทย ${t.th} น.`, W - PAD - 24, top + 122);
                 c.textAlign = 'left';
 
                 ry += l.h;
