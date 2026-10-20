@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=49">
-<link rel="stylesheet" href="admin.css?v=49">
+<link rel="stylesheet" href="styles.css?v=52">
+<link rel="stylesheet" href="admin.css?v=52">
 
 <script>
 (function () {
@@ -150,6 +150,12 @@
                         <svg class="ic" data-i="refresh"><use href="#i-refresh"/></svg><span class="btn-text">โหลดใหม่</span>
                     </button>
                 </div>
+            </div>
+
+            <div class="stat-cards" id="schedStats" aria-live="polite">
+                <div class="stat-card st-blue"><b class="n"><svg class="ic" data-i="table"><use href="#i-table"/></svg><span id="stAll">–</span></b><span class="l">คิวทั้งหมด</span></div>
+                <div class="stat-card st-green"><b class="n"><svg class="ic" data-i="check"><use href="#i-check"/></svg><span id="stDone">–</span></b><span class="l">กรอกครบแล้ว</span></div>
+                <div class="stat-card st-amber"><b class="n"><svg class="ic" data-i="alert"><use href="#i-alert"/></svg><span id="stTodo">–</span></b><span class="l">รอกรอก</span></div>
             </div>
 
             <button class="add-btn" id="pasteBtn" type="button">
@@ -504,6 +510,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=49"></script>
+<script src="admin.js?v=52"></script>
 </body>
 </html>

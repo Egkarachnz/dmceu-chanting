@@ -486,3 +486,63 @@ input:-webkit-autofill:focus {
     #schedReload .btn-text { display: none; }
     #schedReload { padding: 0 11px; }
 }
+
+/* ─── การ์ดสรุปตัวเลข ─── */
+.stat-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+.stat-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-md);
+    box-shadow: var(--shadow-sm); padding: 10px 12px; display: flex; flex-direction: column; gap: 1px; min-width: 0;
+}
+.stat-card .n { font-size: 24px; font-weight: 600; line-height: 1.15; display: flex; align-items: center; gap: 7px; font-variant-numeric: tabular-nums; }
+.stat-card .n .ic { width: 18px; height: 18px; flex: none; }
+.stat-card .l { font-size: 11.5px; color: var(--text-mute); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.st-blue .n  { color: var(--c-blue); }
+.st-green .n { color: var(--c-green); }
+.st-amber .n { color: var(--c-amber); }
+.st-green { border-top: 3px solid var(--c-green); }
+.st-blue  { border-top: 3px solid var(--c-blue); }
+.st-amber { border-top: 3px solid var(--c-amber); }
+
+/* ═════════ เลย์เอาต์จอคอมพิวเตอร์ ═════════
+   จอกว้าง: ใช้ความกว้างเท่าหน้าเว็บหลัก แบ่งสองฝั่ง
+   ซ้าย = หัวข้อ · สรุป · ปุ่ม · ตัวกรอง   ขวา = รายการหลายคอลัมน์ / ตัวอย่างข้อความ
+   มือถือและแท็บเล็ต (ต่ำกว่า 1000px) ไม่เปลี่ยน */
+@media (min-width: 1000px) {
+    .admin-main { max-width: var(--wrap); padding-top: 30px; }
+    .tabs { max-width: 560px; margin-bottom: 26px; }
+
+    #paneSchedule, #paneEvents, #paneLine {
+        display: grid;
+        grid-template-columns: 360px minmax(0, 1fr);
+        grid-template-rows: repeat(7, min-content) 1fr;
+        column-gap: 36px; align-items: start;
+    }
+    #paneSchedule[hidden], #paneEvents[hidden], #paneLine[hidden] { display: none; }
+    #paneSchedule > *, #paneEvents > *, #paneLine > * { grid-column: 1; min-width: 0; }
+    .admin-head { flex-wrap: wrap; row-gap: 10px; }
+    .admin-foot { text-align: left; margin-top: 8px; }
+
+    /* ฝั่งขวา: รายการเป็นตารางการ์ดหลายคอลัมน์ */
+    #paneSchedule > .admin-list, #paneEvents > .admin-list {
+        grid-column: 2; grid-row: 1 / -1; margin-top: 0;
+        display: grid; gap: 14px; align-content: start;
+    }
+    #paneSchedule > .admin-list { grid-template-columns: repeat(auto-fill, minmax(370px, 1fr)); }
+    #paneEvents   > .admin-list { grid-template-columns: repeat(auto-fill, minmax(350px, 1fr)); }
+    #paneSchedule > .admin-list > .admin-empty, #paneEvents > .admin-list > .admin-empty { grid-column: 1 / -1; }
+
+    /* ตัวกรองเรียงแนวตั้งในแถบซ้ายอ่านง่ายกว่า */
+    #schedFilter { flex-wrap: wrap; }
+    #pasteBtn { margin-bottom: 14px; }
+
+    /* LINE: ตัวอย่างข้อความอยู่ฝั่งขวาใหญ่ ๆ */
+    #paneLine > .msg-box {
+        grid-column: 2; grid-row: 1 / -1; margin-top: 0;
+        font-size: 16px; line-height: 1.75; padding: 26px 28px; min-height: 460px;
+    }
+    #paneLine > .msg-actions { margin-top: 6px; }
+    #paneLine > .field { margin-bottom: 4px; }
+
+    .ev-row { grid-template-columns: 120px 1fr; }
+    .ev-thumb { width: 120px; }
+}

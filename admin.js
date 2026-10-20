@@ -983,6 +983,10 @@ function renderSchedule() {
     const todo = sched.filter(r => isTodo(r) && (!r.date || r.date >= startOfToday())).length;
     $('#schedSub').textContent = sched.length
         ? `${sched.length} คิว · ยังไม่ได้กรอก ${todo}` : 'ไม่พบข้อมูลในชีต';
+    // การ์ดสรุป: ทั้งหมด / กรอกครบ / รอกรอก (นับเฉพาะคิวที่ยังไม่ผ่านไป)
+    $('#stAll').textContent = sched.length || '–';
+    $('#stDone').textContent = sched.length ? sched.filter(r => !isTodo(r)).length : '–';
+    $('#stTodo').textContent = sched.length ? todo : '–';
 
     const rows = schedRows();
     const list = $('#schedList');
