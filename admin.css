@@ -222,8 +222,13 @@ body.admin-page { padding-bottom: calc(var(--sat-bottom) + 40px); }
 .tab-btn.on { background: var(--navy); color: #fff; box-shadow: var(--shadow-sm); }
 [data-theme="dark"] .tab-btn.on { background: var(--gold); color: #16110a; }
 .tab-btn:active { transform: scale(.97); }
-@media (max-width: 420px) {
-    .tab-btn span { display: none; }
+/* จอมือถือ: มี 4 แท็บ แสดงชื่อเฉพาะแท็บที่เลือก ที่เหลือเป็นไอคอน ไม่ให้ล้นแถบ */
+@media (max-width: 640px) {
+    .tabs { overflow: hidden; }
+    .tab-btn { flex: 0 0 auto; min-width: 46px; padding: 0 14px; min-width: 0; }
+    .tab-btn:not(.on) span { display: none; }
+    .tab-btn.on { flex: 1 1 auto; min-width: 0; }
+    .tab-btn.on span { overflow: hidden; text-overflow: ellipsis; }
     .tab-btn .ic { width: 18px; height: 18px; }
 }
 
