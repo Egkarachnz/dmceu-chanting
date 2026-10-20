@@ -546,3 +546,8 @@ input:-webkit-autofill:focus {
     .ev-row { grid-template-columns: 120px 1fr; }
     .ev-thumb { width: 120px; }
 }
+
+/* สลับชนิดรีพอร์ตในหน้าต่างรูป */
+.report-seg { margin: 0 0 10px; }
+.report-seg button { flex: 1; }
+#reportImg { transition: opacity .2s; }

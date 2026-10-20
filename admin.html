@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=52">
-<link rel="stylesheet" href="admin.css?v=52">
+<link rel="stylesheet" href="styles.css?v=53">
+<link rel="stylesheet" href="admin.css?v=53">
 
 <script>
 (function () {
@@ -373,6 +373,14 @@
             <h2>รีพอร์ตวัดที่ยังไม่มีข้อมูล</h2>
             <button class="icon-btn" type="button" id="reportClose" aria-label="ปิด"><svg class="ic" data-i="close"><use href="#i-close"/></svg></button>
         </div>
+        <div class="seg report-seg" id="reportKind">
+            <button type="button" class="on" data-k="missing">วัดที่ยังไม่มีข้อมูล</button>
+            <button type="button" data-k="weekly">ตารางรายสัปดาห์</button>
+        </div>
+        <div class="seg report-seg" id="reportRange" hidden>
+            <button type="button" class="on" data-r="0">ทั้งหมดที่เหลือ</button>
+            <button type="button" data-r="4">4 สัปดาห์ข้างหน้า</button>
+        </div>
         <img id="reportImg" class="report-img" alt="รีพอร์ตวัดที่ยังไม่มีข้อมูล">
         <p class="field-hint report-hint" id="reportHint">บน iPhone: แตะค้างที่รูป แล้วเลือก “บันทึกไปยังรูปภาพ” ก็ได้</p>
         <div class="modal-actions">
@@ -510,6 +518,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=52"></script>
+<script src="admin.js?v=53"></script>
 </body>
 </html>
