@@ -1065,7 +1065,8 @@ const norm = t => tidy(t).replace(/\s+/g, '');
 /** ตัดเครื่องหมายคำพูดที่ครอบทั้งหัวข้อ (ไม่ตัดเครื่องหมายคำพูดที่อยู่ข้างในประโยค) */
 function stripOuterQuotes(t) {
     t = tidy(t);
-    const OPEN = /^[“”"‘’'「『«]+/, CLOSE = /[“”"‘’'」』»]+$/;
+    const Q = '“”"‘’\'「」『』«»„‟';
+    const OPEN = new RegExp(`^[${Q}]+`), CLOSE = new RegExp(`[${Q}]+$`);
     if (OPEN.test(t) && CLOSE.test(t)) t = t.replace(OPEN, '').replace(CLOSE, '');
     return t.trim();
 }
@@ -1075,25 +1076,48 @@ function parseSermonPost(text) {
     const lines = raw.split('\n').map(tidy);
     const out = { monk: '', topic: '', round: '', date: null, lines };
 
-    const MONK = /^(?:พระผู้เทศน์สอน|พระผู้เทศน์|พระอาจารย์ผู้เทศน์|พระอาจารย์|ผู้เทศน์สอน|ผู้เทศน์|เทศน์โดย)\s*[:：]\s*(.*)$/;
-    const TOPIC = /^(?:หัวข้อเทศน์|หัวข้อธรรม|หัวข้อ|เรื่อง)\s*[:：]\s*(.*)$/;
+    // ชื่อป้ายกำกับหลายแบบที่พบในโพสต์/ข้อความไลน์ · เครื่องหมายคั่น : หรือไม่มีก็ได้
+    const SEP = '(?:\\s*[:：﹕ː=\\-–—]\\s*|\\s+)';
+    const MONK  = new RegExp(`^(?:พระผู้เทศน์สอน|พระผู้เทศนา|พระผู้เทศน์|พระอาจารย์ผู้เทศน์สอน|พระอาจารย์ผู้เทศน์|พระอาจารย์|ผู้เทศน์สอน|ผู้เทศน์|ผู้บรรยาย|พระวิทยากร|เทศน์โดย|เทศนาโดย|โดย)${SEP}(.*)$`);
+    const TOPIC = new RegExp(`^(?:หัวข้อ(?:การ)?(?:เทศน์สอน|เทศน์|เทศนา|ธรรมะ|ธรรม|บรรยาย)?|ชื่อเรื่อง|ชื่อหัวข้อ|เรื่อง|ธรรมะเรื่อง)${SEP}(.*)$`);
     const ANY_LABEL = /^[^\s:：]{2,24}\s*[:：]/;
+    // ข้อความไทยมักพิมพ์ปิดคำพูดด้วยตัวเปิด (“…“) จึงนับทุกแบบเป็นได้ทั้งเปิดและปิด
+    const QS = '“”"‘’\'「」『』«»„‟';
+    const OPENQ = new RegExp(`^[${QS}]`), CLOSEQ = new RegExp(`[${QS}]$`);
+    // ตัดสัญลักษณ์/อีโมจิ/จุดนำหน้าบรรทัด (เช่น ❖ • 📖 -) เฉพาะตอนตรวจป้าย ไม่แตะตัวข้อความ
+    const head = L => L.replace(/^[^\p{L}\p{N}“"‘'「『«]+/u, '');
+    // เจอป้ายที่ไม่มีค่าท้ายบรรทัด → ค่าอยู่บรรทัดถัดไป
+    const valueOf = (i, v) => {
+        v = tidy(v);
+        if (!v) for (let j = i + 1; j < lines.length; j++) { if (lines[j]) { v = lines[j]; i = j; break; } }
+        return { v, i };
+    };
 
+    let monkLine = -1, topicLine = -1;
     for (let i = 0; i < lines.length; i++) {
-        const L = lines[i];
+        const L = head(lines[i]);
         let m;
         if (!out.monk && (m = L.match(MONK))) {
-            out.monk = tidy(m[1]);
+            const r = valueOf(i, m[1]);
+            if (r.v && !TOPIC.test(head(r.v))) { out.monk = r.v; monkLine = i; }
         } else if (!out.topic && (m = L.match(TOPIC))) {
-            let t = m[1];
-            // หัวข้อยาวที่ขึ้นบรรทัดใหม่กลางเครื่องหมายคำพูด: ต่อบรรทัดถัดไปจนกว่าจะปิดคำพูด
-            if (/^[“"‘'「『«]/.test(t) && !/[”"’'」』»]$/.test(t)) {
-                for (let j = i + 1; j < lines.length && !ANY_LABEL.test(lines[j]) && lines[j]; j++) {
+            const r = valueOf(i, m[1]);
+            let t = r.v; const end = r.i;
+            // หัวข้อยาวที่ตกบรรทัดกลางเครื่องหมายคำพูด: ต่อบรรทัดถัดไปจนกว่าจะปิดคำพูด
+            if (OPENQ.test(t) && !CLOSEQ.test(t)) {
+                for (let j = end + 1; j < lines.length && lines[j] && !ANY_LABEL.test(lines[j]); j++) {
                     t += ' ' + lines[j];
-                    if (/[”"’'」』»]$/.test(lines[j])) break;
+                    if (CLOSEQ.test(lines[j])) break;
                 }
             }
-            out.topic = stripOuterQuotes(t);
+            if (t) { out.topic = stripOuterQuotes(t); topicLine = i; }
+        }
+    }
+
+    // รูปแบบข้อความประกาศในไลน์: หัวข้ออยู่ในเครื่องหมายคำพูดบรรทัดก่อน "❖ โดย พระ…" ไม่มีป้ายหัวข้อ
+    if (!out.topic && monkLine > 0) {
+        for (let j = monkLine - 1; j >= 0 && j >= monkLine - 3; j--) {
+            if (lines[j] && OPENQ.test(lines[j]) && CLOSEQ.test(lines[j])) { out.topic = stripOuterQuotes(lines[j]); break; }
         }
     }
     out.monk = tidy(out.monk);
