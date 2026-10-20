@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=55">
-<link rel="stylesheet" href="admin.css?v=55">
+<link rel="stylesheet" href="styles.css?v=57">
+<link rel="stylesheet" href="admin.css?v=57">
 
 <script>
 (function () {
@@ -439,7 +439,7 @@
 <dialog class="sheet-modal" id="reportModal">
     <div class="modal-card edit-card">
         <div class="modal-head">
-            <h2>รีพอร์ตวัดที่ยังไม่มีข้อมูล</h2>
+            <h2>สร้างรีพอร์ตเป็นรูป</h2>
             <button class="icon-btn" type="button" id="reportClose" aria-label="ปิด"><svg class="ic" data-i="close"><use href="#i-close"/></svg></button>
         </div>
         <div class="seg report-seg" id="reportKind">
@@ -447,10 +447,10 @@
             <button type="button" data-k="weekly">ตารางรายสัปดาห์</button>
         </div>
         <div class="seg report-seg" id="reportRange" hidden>
-            <button type="button" class="on" data-r="0">ทั้งหมดที่เหลือ</button>
-            <button type="button" data-r="4">4 สัปดาห์ข้างหน้า</button>
+            <button type="button" class="on" data-r="4">4 สัปดาห์ข้างหน้า</button>
+            <button type="button" data-r="0">ทั้งหมดที่เหลือ</button>
         </div>
-        <img id="reportImg" class="report-img" alt="รีพอร์ตวัดที่ยังไม่มีข้อมูล">
+        <div class="rp-pages" id="reportPages" aria-live="polite"></div>
         <p class="field-hint report-hint" id="reportHint">บน iPhone: แตะค้างที่รูป แล้วเลือก “บันทึกไปยังรูปภาพ” ก็ได้</p>
         <div class="modal-actions">
             <button class="btn-primary" type="button" id="reportShare" hidden><svg class="ic" data-i="save"><use href="#i-save"/></svg> บันทึกรูป / แชร์</button>
@@ -587,6 +587,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=55"></script>
+<script src="admin.js?v=57"></script>
 </body>
 </html>
