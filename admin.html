@@ -22,8 +22,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preconnect" href="https://apjgwbwdzkxadbcutuxt.supabase.co">
 <link href="https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=53">
-<link rel="stylesheet" href="admin.css?v=53">
+<link rel="stylesheet" href="styles.css?v=55">
+<link rel="stylesheet" href="admin.css?v=55">
 
 <script>
 (function () {
@@ -65,9 +65,38 @@
         <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h10"/></symbol>
         <symbol id="i-share" viewBox="0 0 24 24"><path d="M4 12v7a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7"/><path d="M16 6l-4-4-4 4M12 2v13"/></symbol>
         <symbol id="i-save" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></symbol>
+        <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></symbol>
+        <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></symbol>
+        <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+        <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4.4 3.6-7 8-7s8 2.6 8 7"/></symbol>
         <symbol id="i-cards" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M3 10h18"/></symbol>
     </defs>
 </svg>
+
+<aside class="sidebar" id="sidebar" aria-label="เมนูหลัก" hidden>
+    <a class="sb-brand" href="./" title="ไปหน้าเว็บหลัก">
+        <img src="assets/admin-icon-192.png" alt="" width="40" height="40">
+        <span><strong>หลังบ้าน DMCEU</strong><small>ตารางวัดนำสวดมนต์ · SS16</small></span>
+    </a>
+    <nav class="sb-nav">
+        <p class="sb-label">เมนูหลัก</p>
+        <button class="nav-btn on" type="button" data-tab="overview"><svg class="ic" data-i="grid"><use href="#i-grid"/></svg><span>ภาพรวม</span></button>
+        <button class="nav-btn" type="button" data-tab="schedule"><svg class="ic" data-i="table"><use href="#i-table"/></svg><span>ตารางสวดมนต์</span><b class="nav-badge" id="navTodo" hidden></b></button>
+        <button class="nav-btn" type="button" data-tab="events"><svg class="ic" data-i="event"><use href="#i-event"/></svg><span>โพสต์กิจกรรม</span></button>
+        <button class="nav-btn" type="button" data-tab="line"><svg class="ic" data-i="chat"><use href="#i-chat"/></svg><span>ข้อความ LINE</span></button>
+        <p class="sb-label">ทางลัด</p>
+        <button class="nav-btn js-paste" type="button"><svg class="ic" data-i="copy"><use href="#i-copy"/></svg><span>วางข้อความโพสต์</span></button>
+        <button class="nav-btn js-report" type="button"><svg class="ic" data-i="image"><use href="#i-image"/></svg><span>สร้างรีพอร์ตเป็นรูป</span></button>
+        <a class="nav-btn" href="./" target="_blank" rel="noopener"><svg class="ic" data-i="external"><use href="#i-external"/></svg><span>เปิดหน้าเว็บสาธารณะ</span></a>
+    </nav>
+    <div class="sb-foot">
+        <div class="sb-user">
+            <span class="sb-avatar" id="sbAvatar">A</span>
+            <span class="sb-user-text"><strong>ผู้ดูแลระบบ</strong><small id="sbUser">–</small></span>
+        </div>
+        <small class="sb-ver">เวอร์ชัน <span id="sbVer"></span></small>
+    </div>
+</aside>
 
 <header class="appbar" id="appbar">
     <div class="appbar-inner">
@@ -78,7 +107,9 @@
                 <span>ตารางวัดนำสวดมนต์ · ทีมงาน</span>
             </div>
         </a>
+        <div class="crumb" id="topCrumb" aria-label="ตำแหน่งปัจจุบัน"><span>หลังบ้าน</span><i>/</i><b id="topTitle">ภาพรวม</b></div>
         <div class="appbar-actions">
+            <span class="top-date" id="topDate"><svg class="ic" data-i="clock"><use href="#i-clock"/></svg><span></span></span>
             <button class="icon-btn" id="themeBtn" type="button" title="สลับธีม" aria-label="สลับธีม">
                 <svg class="ic ic-sun" data-i="sun"><use href="#i-sun"/></svg>
                 <svg class="ic ic-moon" data-i="moon"><use href="#i-moon"/></svg>
@@ -124,7 +155,10 @@
     <!-- ─── หน้าหลักหลังบ้าน ─── -->
     <section id="appView" hidden>
         <nav class="tabs" id="tabs" role="tablist">
-            <button class="tab-btn on" type="button" data-tab="schedule" role="tab">
+            <button class="tab-btn on" type="button" data-tab="overview" role="tab">
+                <svg class="ic" data-i="grid"><use href="#i-grid"/></svg><span>ภาพรวม</span>
+            </button>
+            <button class="tab-btn" type="button" data-tab="schedule" role="tab">
                 <svg class="ic" data-i="table"><use href="#i-table"/></svg><span>ตารางสวดมนต์</span>
             </button>
             <button class="tab-btn" type="button" data-tab="events" role="tab">
@@ -135,30 +169,48 @@
             </button>
         </nav>
 
-        <!-- ══ แท็บ 1 · ตารางสวดมนต์ (เขียนลง Google Sheets) ══ -->
-        <div class="pane" id="paneSchedule">
+        <!-- ══ ภาพรวม (แดชบอร์ด) ══ -->
+        <div class="pane" id="paneOverview">
+            <div class="admin-head">
+                <div class="admin-head-text">
+                    <h1 class="admin-title"><svg class="ic" data-i="grid"><use href="#i-grid"/></svg> ภาพรวม</h1>
+                    <p class="admin-sub" id="ovSub">กำลังโหลด…</p>
+                </div>
+                <div class="head-actions">
+                    <button class="btn-ghost btn-sm js-report" type="button"><svg class="ic" data-i="image"><use href="#i-image"/></svg> รีพอร์ต</button>
+                    <button class="btn-ghost btn-sm js-reload" type="button" aria-label="โหลดจากชีตใหม่"><svg class="ic" data-i="refresh"><use href="#i-refresh"/></svg><span class="btn-text">โหลดใหม่</span></button>
+                </div>
+            </div>
+            <div class="kpi-grid" id="ovKpi"></div>
+            <div class="dash-grid">
+                <section class="panel p-next" id="ovNext"></section>
+                <section class="panel p-todo" id="ovTodo"></section>
+                <section class="panel p-months" id="ovMonths"></section>
+                <section class="panel p-quick" id="ovQuick"></section>
+            </div>
+        </div>
+
+        <!-- ══ ตารางสวดมนต์ (เขียนลง Google Sheets) ══ -->
+        <div class="pane" id="paneSchedule" hidden>
             <div class="admin-head">
                 <div class="admin-head-text">
                     <h1 class="admin-title"><svg class="ic" data-i="table"><use href="#i-table"/></svg> ตารางสวดมนต์</h1>
                     <p class="admin-sub" id="schedSub">กำลังโหลด…</p>
                 </div>
                 <div class="head-actions">
-                    <button class="btn-ghost btn-sm" id="reportBtn" type="button" title="สร้างรูปรายงานวัดที่ยังไม่มีข้อมูล">
-                        <svg class="ic" data-i="image"><use href="#i-image"/></svg> รีพอร์ต
-                    </button>
-                    <button class="btn-ghost btn-sm" id="schedReload" type="button" title="โหลดจากชีตใหม่" aria-label="โหลดจากชีตใหม่">
-                        <svg class="ic" data-i="refresh"><use href="#i-refresh"/></svg><span class="btn-text">โหลดใหม่</span>
-                    </button>
+                    <button class="btn-ghost btn-sm js-paste d-only" type="button"><svg class="ic" data-i="copy"><use href="#i-copy"/></svg> วางข้อความ</button>
+                    <button class="btn-ghost btn-sm js-report" type="button" title="สร้างรูปรีพอร์ต"><svg class="ic" data-i="image"><use href="#i-image"/></svg> รีพอร์ต</button>
+                    <button class="btn-ghost btn-sm js-reload" id="schedReload" type="button" title="โหลดจากชีตใหม่" aria-label="โหลดจากชีตใหม่"><svg class="ic" data-i="refresh"><use href="#i-refresh"/></svg><span class="btn-text">โหลดใหม่</span></button>
                 </div>
             </div>
 
-            <div class="stat-cards" id="schedStats" aria-live="polite">
+            <div class="stat-cards m-only" id="schedStats" aria-live="polite">
                 <div class="stat-card st-blue"><b class="n"><svg class="ic" data-i="table"><use href="#i-table"/></svg><span id="stAll">–</span></b><span class="l">คิวทั้งหมด</span></div>
                 <div class="stat-card st-green"><b class="n"><svg class="ic" data-i="check"><use href="#i-check"/></svg><span id="stDone">–</span></b><span class="l">กรอกครบแล้ว</span></div>
                 <div class="stat-card st-amber"><b class="n"><svg class="ic" data-i="alert"><use href="#i-alert"/></svg><span id="stTodo">–</span></b><span class="l">รอกรอก</span></div>
             </div>
 
-            <button class="add-btn" id="pasteBtn" type="button">
+            <button class="add-btn js-paste m-only" id="pasteBtn" type="button">
                 <span class="add-btn-ic"><svg class="ic" data-i="copy"><use href="#i-copy"/></svg></span>
                 <span class="add-btn-text">
                     <strong>วางข้อความ · เติมให้อัตโนมัติ</strong>
@@ -166,13 +218,30 @@
                 </span>
             </button>
 
-            <div class="seg" id="schedFilter">
-                <button type="button" class="on" data-f="todo">ยังไม่ได้กรอก</button>
-                <button type="button" data-f="upcoming">กำลังจะถึง</button>
-                <button type="button" data-f="all">ทั้งหมด</button>
+            <div class="toolbar">
+                <label class="search"><svg class="ic" data-i="search"><use href="#i-search"/></svg>
+                    <input id="schedSearch" type="search" placeholder="ค้นหาวัด · พระอาจารย์ · หัวข้อ" autocomplete="off" enterkeyhint="search">
+                </label>
+                <div class="seg" id="schedFilter">
+                    <button type="button" class="on" data-f="todo">ยังไม่ได้กรอก</button>
+                    <button type="button" data-f="upcoming">กำลังจะถึง</button>
+                    <button type="button" data-f="all">ทั้งหมด</button>
+                </div>
             </div>
 
-            <div class="admin-list" id="schedList"></div>
+            <div class="admin-list m-only" id="schedList"></div>
+
+            <div class="panel tbl-panel d-only">
+                <table class="dtable" id="schedTable">
+                    <thead><tr>
+                        <th class="c-date">วันที่</th><th class="c-round">ครั้งที่</th><th class="c-temple">วัดที่นำสวดมนต์</th>
+                        <th class="c-country">ประเทศ</th><th class="c-monk">พระอาจารย์</th><th class="c-topic">หัวข้อเทศน์</th>
+                        <th class="c-status">สถานะ</th><th class="c-act"></th>
+                    </tr></thead>
+                    <tbody id="schedBody"></tbody>
+                </table>
+                <p class="tbl-empty" id="schedEmpty" hidden></p>
+            </div>
 
             <p class="admin-foot">
                 แก้แล้วบันทึกลง Google Sheets ให้ทันที · หน้าเว็บสาธารณะจะอัปเดตตามภายในประมาณ 30 วินาที
@@ -518,6 +587,6 @@
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
-<script src="admin.js?v=53"></script>
+<script src="admin.js?v=55"></script>
 </body>
 </html>

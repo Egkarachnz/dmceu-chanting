@@ -550,9 +550,8 @@ function syncReportTabs() {
     $('#reportRange').hidden = reportKind !== 'weekly';
 }
 
-$('#reportBtn').addEventListener('click', async () => {
+$$('.js-report').forEach(btn => btn.addEventListener('click', async () => {
     if (!sched.length) return toast('ยังไม่ได้โหลดตาราง · กดโหลดใหม่ก่อน');
-    const btn = $('#reportBtn');
     btn.classList.add('busy');
     try {
         await renderReport();
@@ -563,7 +562,7 @@ $('#reportBtn').addEventListener('click', async () => {
     } finally {
         btn.classList.remove('busy');
     }
-});
+}));
 
 /* สลับชนิดรีพอร์ต / ช่วงสัปดาห์ แล้วสร้างรูปใหม่ในหน้าต่างเดิม */
 async function switchReport(change) {
@@ -631,6 +630,8 @@ async function refreshAuth() {
 }
 
 function showAuth(msg) {
+    document.body.classList.remove('is-app');
+    $('#sidebar').hidden = true;
     $('#authView').hidden = false;
     $('#appView').hidden = true;
     $('#logoutBtn').hidden = true;
@@ -640,13 +641,19 @@ function showAuth(msg) {
 }
 
 function showApp() {
+    document.body.classList.add('is-app');
+    $('#sidebar').hidden = false;
+    const em = (session && session.user && session.user.email) || '';
+    $('#sbUser').textContent = em || '–';
+    $('#sbAvatar').textContent = (em[0] || 'A').toUpperCase();
+    $('#sbVer').textContent = 'v' + (APP_V || '');
     $('#authView').hidden = true;
     $('#appView').hidden = false;
     $('#logoutBtn').hidden = false;
     $('#logoutBtn').title = `ออกจากระบบ (${session.user.email})`;
     $('#pwBtn').hidden = false;
-    let tab = 'schedule';
-    try { tab = localStorage.getItem('dmceu.admin.tab') || 'schedule'; } catch (e) {}
+    let tab = 'overview';
+    try { tab = localStorage.getItem('dmceu.admin.tab') || 'overview'; } catch (e) {}
     setTab(tab);
     loadEvents();
     // ค่าตั้ง/ประเทศ ต้องมาก่อนวาดข้อความ LINE จึงโหลดให้เสร็จแล้วค่อยดึงตาราง
@@ -757,6 +764,7 @@ async function loadEvents() {
     }
     events = data || [];
     renderList();
+    renderOverview();
 }
 
 /** รูปทั้งหมดของโพสต์ (รองรับแถวเก่าที่มีแค่ image_path) */
@@ -1243,11 +1251,16 @@ window.processSchedule = processSchedule;
 const isTodo = r => !r.monk || !r.topic;
 const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; };
 
+let schedQuery = '';
 function schedRows() {
     const today = startOfToday();
-    if (schedFilter === 'all') return sched;
-    if (schedFilter === 'upcoming') return sched.filter(r => r.date && r.date >= today);
-    return sched.filter(r => isTodo(r) && (!r.date || r.date >= today));   // ยังไม่ได้กรอก + ยังมาไม่ถึง
+    let rows;
+    if (schedFilter === 'all') rows = sched;
+    else if (schedFilter === 'upcoming') rows = sched.filter(r => r.date && r.date >= today);
+    else rows = sched.filter(r => isTodo(r) && (!r.date || r.date >= today));   // ยังไม่ได้กรอก + ยังมาไม่ถึง
+    const q = norm(schedQuery).toLowerCase();
+    if (!q) return rows;
+    return rows.filter(r => norm([r.temple, r.monk, r.topic, r.round, temples[r.temple] || '', thaiDateShort(r.date)].join(' ')).toLowerCase().includes(q));
 }
 
 function renderSchedule() {
@@ -1259,11 +1272,16 @@ function renderSchedule() {
     $('#stDone').textContent = sched.length ? sched.filter(r => !isTodo(r)).length : '–';
     $('#stTodo').textContent = sched.length ? todo : '–';
 
+    const nb = $('#navTodo');
+    nb.textContent = todo; nb.hidden = !todo;
+
     const rows = schedRows();
+    renderSchedTable(rows);
+    renderOverview();
     const list = $('#schedList');
     if (!rows.length) {
         list.innerHTML = `<div class="admin-empty">${icon('check')}<span>${
-            schedFilter === 'todo' ? 'กรอกครบทุกคิวแล้ว 🎉' : 'ไม่มีรายการในตัวกรองนี้'}</span></div>`;
+            schedQuery ? 'ไม่พบรายการที่ค้นหา' : schedFilter === 'todo' ? 'กรอกครบทุกคิวแล้ว 🎉' : 'ไม่มีรายการในตัวกรองนี้'}</span></div>`;
         return;
     }
     list.innerHTML = rows.map(r => `
@@ -1286,13 +1304,47 @@ function renderSchedule() {
     flashRound = null;
 }
 
+/** ตารางข้อมูลสำหรับจอคอม (มือถือใช้การ์ดด้านบน) */
+function renderSchedTable(rows) {
+    const today = startOfToday();
+    const body = $('#schedBody'), empty = $('#schedEmpty');
+    empty.hidden = !!rows.length;
+    if (!rows.length) {
+        empty.textContent = schedQuery ? 'ไม่พบรายการที่ค้นหา' : schedFilter === 'todo' ? 'กรอกครบทุกคิวแล้ว' : 'ไม่มีรายการในตัวกรองนี้';
+    }
+    const cell = (t, cls = '') => `<td class="${cls}" title="${esc(t)}">${t ? esc(t) : '<em>–</em>'}</td>`;
+    body.innerHTML = rows.map(r => {
+        const past = r.date && r.date < today;
+        const miss = !r.monk && !r.topic ? 'ยังไม่มีข้อมูล' : !r.monk ? 'ขาดพระอาจารย์' : !r.topic ? 'ขาดหัวข้อ' : '';
+        const status = past ? '<span class="bdg past">ผ่านไปแล้ว</span>'
+            : miss ? `<span class="bdg warn">${miss}</span>` : '<span class="bdg ok">ครบ</span>';
+        const d = r.date ? `<b>${esc(thaiDateShort(r.date))}</b><small>${esc(thaiDays[r.date.getDay()].replace('วัน', ''))}</small>` : '–';
+        return `<tr class="${past ? 'is-past ' : ''}${isTodo(r) && !past ? 'is-todo ' : ''}${r.round === flashRound ? 'just-saved' : ''}" data-round="${esc(r.round)}">
+            <td class="c-date">${d}</td>
+            <td class="c-round">${esc(r.round)}</td>
+            ${cell((r.temple || '').replace(/​/g, ''), 'c-temple')}
+            ${cell(temples[r.temple] || '', 'c-country')}
+            ${cell(r.monk, 'c-monk')}
+            ${cell(r.topic, 'c-topic')}
+            <td class="c-status">${status}</td>
+            <td class="c-act"><button class="icon-btn" type="button" title="แก้ไข" aria-label="แก้ไข">${icon('edit')}</button></td>
+        </tr>`;
+    }).join('');
+}
+$('#schedBody').addEventListener('click', e => {
+    const tr = e.target.closest('tr[data-round]');
+    const r = tr && sched.find(x => x.round === tr.dataset.round);
+    if (r) openRow(r);
+});
+$('#schedSearch').addEventListener('input', e => { schedQuery = e.target.value; renderSchedule(); });
+
 $('#schedList').addEventListener('click', e => {
     const row = e.target.closest('.sc-row');
     if (!row) return;
     const r = sched.find(x => x.round === row.dataset.round);
     if (r) openRow(r);
 });
-$('#schedReload').addEventListener('click', () => loadSchedule());
+$$('.js-reload').forEach(b => b.addEventListener('click', () => loadSchedule()));
 $('#schedFilter').addEventListener('click', e => {
     const b = e.target.closest('[data-f]');
     if (!b) return;
@@ -1433,13 +1485,13 @@ function findRowForPost(p) {
 }
 
 const pasteModal = $('#pasteModal');
-$('#pasteBtn').addEventListener('click', () => {
+$$('.js-paste').forEach(btn => btn.addEventListener('click', () => {
     if (!sched.length) return toast('ยังไม่ได้โหลดตาราง · กดโหลดใหม่ก่อน');
     $('#pasteText').value = '';
     showError('#pasteError', '');
     pasteModal.showModal();
     setTimeout(() => $('#pasteText').focus(), 150);
-});
+}));
 $('#pasteClose').addEventListener('click', () => pasteModal.close());
 $('#pasteCancel').addEventListener('click', () => pasteModal.close());
 
@@ -1770,14 +1822,156 @@ $('#tplForm').addEventListener('submit', async e => {
     }
 });
 
+/* ── ภาพรวม (แดชบอร์ด) ── */
+const daysUntil = d => Math.round((d - startOfToday()) / 864e5);
+const countdownText = n => n <= 0 ? 'วันนี้' : n === 1 ? 'พรุ่งนี้' : `อีก ${n} วัน`;
+
+/** เวลายุโรป/ไทย ของคิวนั้น (คำนวณจากวันจริง ปรับฤดูร้อน/หนาวเอง) */
+function sessionTimes(r) {
+    if (!r.date) return null;
+    const [sh, sm] = msgCfg.start.split(':').map(Number), [eh, em] = msgCfg.end.split(':').map(Number);
+    const y = r.date.getFullYear(), mo = r.date.getMonth(), d = r.date.getDate();
+    const a = zonedToUtc(y, mo, d, sh, sm, msgCfg.baseZone), b = zonedToUtc(y, mo, d, eh, em, msgCfg.baseZone);
+    const span = tz => `${timeInZone(a, tz)}–${timeInZone(b, tz)}`;
+    return { eu: span(msgCfg.baseZone), th: span('Asia/Bangkok') };
+}
+
+function renderOverview() {
+    const kpi = $('#ovKpi');
+    if (!kpi) return;
+    if (!sched.length) { $('#ovSub').textContent = 'กำลังโหลดข้อมูลจากชีต…'; return; }
+
+    const today = startOfToday();
+    const upcoming = sched.filter(r => r.date && r.date >= today).sort((a, b) => a.date - b.date);
+    const past = sched.filter(r => r.date && r.date < today);
+    const doneAll = sched.filter(r => !isTodo(r)).length;
+    const todoUp = upcoming.filter(isTodo);
+    const pct = Math.round(doneAll / sched.length * 100);
+    $('#ovSub').textContent = `ซีซั่น ${SEASON_CODE} · ${sched.length} คิว · ข้อมูล ณ ${thaiDateFull(today)}`;
+
+    const card = (c, ic, n, label, sub, bar) => `
+        <div class="kpi k-${c}">
+            <span class="kpi-ic">${icon(ic)}</span>
+            <div class="kpi-body"><b>${n}</b><span>${label}</span><small>${sub}</small>
+            ${bar != null ? `<i class="kpi-bar"><u style="width:${bar}%"></u></i>` : ''}</div>
+        </div>`;
+    kpi.innerHTML =
+        card('blue', 'table', sched.length, 'คิวทั้งหมด', `ซีซั่น ${SEASON_CODE}`) +
+        card('green', 'check', doneAll, 'กรอกข้อมูลครบ', `${pct}% ของทั้งหมด`, pct) +
+        card('amber', 'alert', todoUp.length, 'รอกรอก (ยังไม่ถึง)', todoUp[0] ? `ใกล้สุด ${thaiDateShort(todoUp[0].date)}` : 'ครบทุกคิวแล้ว') +
+        card('violet', 'event', upcoming.length, 'คิวที่เหลือ', `ผ่านไปแล้ว ${past.length} คิว`);
+
+    // คิวถัดไป
+    const nx = upcoming[0];
+    if (!nx) {
+        $('#ovNext').innerHTML = `<div class="panel-head"><h2>${icon('clock')} คิวถัดไป</h2></div><div class="panel-empty">ไม่มีคิวที่เหลือ</div>`;
+    } else {
+        const t = sessionTimes(nx), n = daysUntil(nx.date), miss = isTodo(nx);
+        $('#ovNext').innerHTML = `
+            <div class="panel-head"><h2>${icon('clock')} คิวถัดไป</h2><span class="pill ${n <= 3 ? 'p-amber' : 'p-blue'}">${countdownText(n)}</span></div>
+            <div class="next-main">
+                <div class="nx-date"><b>${nx.date.getDate()}</b><span>${thaiMonthsAbbr[nx.date.getMonth()]}</span><small>${thaiDays[nx.date.getDay()].replace('วัน', '')}</small></div>
+                <div class="nx-info">
+                    <h3>${esc((nx.temple || '').replace(/​/g, ''))}</h3>
+                    <p class="nx-meta">ครั้งที่ ${esc(nx.round)}${temples[nx.temple] ? ' · ' + esc(temples[nx.temple]) : ''}</p>
+                    ${nx.monk ? `<p class="nx-monk">${icon('user')} ${esc(nx.monk)}</p>` : ''}
+                    ${nx.topic ? `<p class="nx-topic">“${esc(nx.topic)}”</p>` : ''}
+                    ${miss ? `<p class="nx-warn">${icon('alert')} ${!nx.monk && !nx.topic ? 'ยังไม่มีพระอาจารย์และหัวข้อเทศน์' : !nx.monk ? 'ยังไม่มีพระอาจารย์' : 'ยังไม่มีหัวข้อเทศน์'}</p>` : ''}
+                </div>
+            </div>
+            ${t ? `<div class="nx-times"><span>ยุโรป <b>${t.eu}</b> น.</span><span>ไทย <b>${t.th}</b> น.</span></div>` : ''}
+            <div class="nx-actions">
+                <button class="btn-primary btn-sm" type="button" data-ov="edit" data-round="${esc(nx.round)}">${icon('edit')} ${miss ? 'กรอกข้อมูลคิวนี้' : 'แก้ไขคิวนี้'}</button>
+                <button class="btn-ghost btn-sm" type="button" data-ov="line" data-round="${esc(nx.round)}">${icon('chat')} สร้างข้อความ LINE</button>
+            </div>`;
+    }
+
+    // งานที่ต้องกรอก
+    const list = todoUp.slice(0, 6);
+    $('#ovTodo').innerHTML = `
+        <div class="panel-head"><h2>${icon('alert')} งานที่ต้องกรอก</h2><span class="pill ${todoUp.length ? 'p-amber' : 'p-green'}">${todoUp.length ? todoUp.length + ' คิว' : 'ครบแล้ว'}</span></div>
+        ${list.length ? `<ul class="todo-list">${list.map(r => `
+            <li data-ov="edit" data-round="${esc(r.round)}" tabindex="0">
+                <span class="td-date"><b>${r.date.getDate()}</b><small>${thaiMonthsAbbr[r.date.getMonth()]}</small></span>
+                <span class="td-main"><b>${esc((r.temple || '').replace(/​/g, ''))}</b>
+                    <small>ครั้งที่ ${esc(r.round)} · ${!r.monk && !r.topic ? 'ขาดพระอาจารย์และหัวข้อ' : !r.monk ? 'ขาดพระอาจารย์' : 'ขาดหัวข้อ'} · ${countdownText(daysUntil(r.date))}</small></span>
+                <span class="td-go">${icon('edit')}</span>
+            </li>`).join('')}</ul>
+            ${todoUp.length > list.length ? `<button class="panel-link" type="button" data-ov="todo-all">ดูทั้งหมด ${todoUp.length} คิว →</button>` : ''}`
+            : `<div class="panel-empty">${icon('check')} กรอกครบทุกคิวแล้ว</div>`}`;
+
+    // ความคืบหน้ารายเดือน
+    const byMonth = [];
+    sched.filter(r => r.date).sort((a, b) => a.date - b.date).forEach(r => {
+        const key = r.date.getFullYear() * 12 + r.date.getMonth();
+        let m = byMonth[byMonth.length - 1];
+        if (!m || m.key !== key) { m = { key, d: r.date, total: 0, done: 0 }; byMonth.push(m); }
+        m.total++; if (!isTodo(r)) m.done++;
+    });
+    $('#ovMonths').innerHTML = `
+        <div class="panel-head"><h2>${icon('table')} ความคืบหน้ารายเดือน</h2><span class="pill p-blue">${pct}%</span></div>
+        <ul class="month-list">${byMonth.map(m => {
+            const w = Math.round(m.done / m.total * 100), cur = m.d.getFullYear() === today.getFullYear() && m.d.getMonth() === today.getMonth();
+            return `<li class="${cur ? 'is-cur' : ''}">
+                <span class="ml-name">${thaiMonthsFull[m.d.getMonth()]} ${m.d.getFullYear() + 543}${cur ? ' <em>เดือนนี้</em>' : ''}</span>
+                <span class="ml-bar"><u style="width:${w}%"></u></span>
+                <span class="ml-num">${m.done}/${m.total}</span></li>`;
+        }).join('')}</ul>`;
+
+    // ทางลัด + สรุปโพสต์กิจกรรม
+    const shown = events.filter(e => e.visible).length;
+    $('#ovQuick').innerHTML = `
+        <div class="panel-head"><h2>${icon('plus')} ทางลัด</h2></div>
+        <div class="quick-grid">
+            <button type="button" class="qk q-teal" data-ov="paste">${icon('copy')}<b>วางข้อความโพสต์</b><small>เติมพระ/หัวข้อให้อัตโนมัติ</small></button>
+            <button type="button" class="qk q-orange" data-ov="report">${icon('image')}<b>สร้างรีพอร์ต</b><small>เป็นรูปแชร์เข้า LINE</small></button>
+            <button type="button" class="qk q-green" data-ov="line-next">${icon('chat')}<b>ข้อความ LINE</b><small>ประกาศคิวถัดไป</small></button>
+            <button type="button" class="qk q-violet" data-ov="add-event">${icon('event')}<b>เพิ่มโพสต์กิจกรรม</b><small>${events.length ? `มี ${events.length} โพสต์ · แสดง ${shown}` : 'อัปโหลดรูปโปสเตอร์'}</small></button>
+        </div>`;
+}
+
+$('#paneOverview').addEventListener('click', e => {
+    const el = e.target.closest('[data-ov]');
+    if (!el) return;
+    const r = el.dataset.round && sched.find(x => x.round === el.dataset.round);
+    switch (el.dataset.ov) {
+        case 'edit': if (r) openRow(r); break;
+        case 'line': case 'line-next': {
+            const nx = r || sched.filter(x => x.date && x.date >= startOfToday()).sort((a, b) => a.date - b.date)[0];
+            setTab('line');
+            if (nx) { $('#lineRound').value = nx.round; renderLineMessage(); }
+            break;
+        }
+        case 'todo-all':
+            schedFilter = 'todo';
+            $$('#schedFilter button').forEach(x => x.classList.toggle('on', x.dataset.f === 'todo'));
+            setTab('schedule'); renderSchedule(); break;
+        case 'paste': $('.js-paste').click(); break;
+        case 'report': $('.js-report').click(); break;
+        case 'add-event': setTab('events'); $('#addBtn').click(); break;
+    }
+});
+$('#paneOverview').addEventListener('keydown', e => {
+    if ((e.key === 'Enter' || e.key === ' ') && e.target.matches('li[data-ov]')) { e.preventDefault(); e.target.click(); }
+});
+
+// วันที่บนแถบบน (จอคอม)
+(function setTopDate() {
+    const d = new Date();
+    $('#topDate span').textContent = `${thaiDays[d.getDay()]}ที่ ${d.getDate()} ${thaiMonthsFull[d.getMonth()]} ${d.getFullYear() + 543}`;
+})();
+
 /* ── แท็บ ── */
-const PANES = { schedule: '#paneSchedule', events: '#paneEvents', line: '#paneLine' };
+const PANES = { overview: '#paneOverview', schedule: '#paneSchedule', events: '#paneEvents', line: '#paneLine' };
+const PAGE_NAMES = { overview: 'ภาพรวม', schedule: 'ตารางสวดมนต์', events: 'โพสต์กิจกรรม', line: 'ข้อความ LINE' };
 function setTab(name) {
-    if (!PANES[name]) name = 'schedule';
+    if (!PANES[name]) name = 'overview';
     Object.entries(PANES).forEach(([k, sel]) => { $(sel).hidden = k !== name; });
-    $$('.tab-btn').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+    $$('.tab-btn, .nav-btn[data-tab]').forEach(b => b.classList.toggle('on', b.dataset.tab === name));
+    $('#topTitle').textContent = PAGE_NAMES[name];
+    if (name === 'overview') renderOverview();
     try { localStorage.setItem('dmceu.admin.tab', name); } catch (e) {}
     if (name === 'line') renderLineMessage();
     window.scrollTo(0, 0);
 }
-$$('.tab-btn').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
+$$('.tab-btn, .nav-btn[data-tab]').forEach(b => b.addEventListener('click', () => setTab(b.dataset.tab)));
